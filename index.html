@@ -175,6 +175,9 @@ body{display:flex;min-height:100vh}
 .chat-head .avatar{width:36px;height:36px;background:var(--cinnabar);color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800}
 .chat-head .cname{font-size:14px;font-weight:800;letter-spacing:.04em}
 .chat-head .crole{font-size:12px;color:#A39C91}
+.chat-head .ai-eval-btn{margin-left:auto;padding:7px 16px;font-size:12px;font-weight:700;letter-spacing:.06em;background:var(--cinnabar);color:#fff;border:none;cursor:pointer;transition:.15s;white-space:nowrap}
+.chat-head .ai-eval-btn:hover:not(:disabled){background:#B8483A}
+.chat-head .ai-eval-btn:disabled{opacity:.35;cursor:not-allowed;background:#6B655C}
 .chat-body{flex:1;overflow-y:auto;padding:18px;display:flex;flex-direction:column;gap:14px;background:var(--card)}
 .msg{max-width:82%;padding:11px 15px;font-size:14px;line-height:1.7;white-space:pre-wrap}
 .msg.bot{align-self:flex-start;background:#F1EDE5;border:1px solid var(--line);border-top-left-radius:0}
@@ -519,10 +522,11 @@ mark{background:transparent;border-bottom:2px solid var(--cinnabar);color:inheri
         <button class="role-pill" data-role="技术交付">技术交付</button>
       </div>
       <div class="chat-wrap">
-        <div class="chat-head">
-          <div class="avatar">千</div>
-          <div><div class="cname" id="aiName">千手考官</div><div class="crole" id="aiRole">按 L3 四维度标准考核你</div></div>
-        </div>
+      <div class="chat-head">
+        <div class="avatar">千</div>
+        <div><div class="cname" id="aiName">千手考官</div><div class="crole" id="aiRole">按 L3 四维度标准考核你</div></div>
+        <button class="ai-eval-btn" id="aiEvalBtn" onclick="aiEvaluate()" disabled>AI评估</button>
+      </div>
         <div class="chat-body" id="chatBody"></div>
         <div class="chat-input">
           <textarea id="chatInput" placeholder="输入回答后按回车发送（Shift+回车换行）…" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChat()}"></textarea>
@@ -1415,6 +1419,7 @@ function setMaster(id,v){ if(!S.checkMaster)S.checkMaster={}; S.checkMaster[id]=
    ============================================================ */
 /* AI陪链初始化欢迎消息 */
 let aiInited=false;
+let aiState={phase:'idle',qIdx:0,asked:0,answered:0,role:'',day:0};
 function initAIChat(){
   if(aiInited)return;
   aiInited=true;
@@ -1423,7 +1428,7 @@ function initAIChat(){
 let aiDay=currentIndex();
 let aiRole='考官';
 function aiAddContext(text){
-  addMsg('user', text); askAI(text);
+  addMsg('user', text); askAI(text, true);
 }
 function setRole(r){
   aiRole=r;
@@ -1431,6 +1436,9 @@ function setRole(r){
   const map={考官:['千手考官','按 L3 四维度标准考核你'],客户:['客户代表','扮演国数集团领导，考验你的方案'],'技术交付':['技术交付','扮演电信技术团队 ·对齐可行性']};
   document.getElementById('aiName').textContent=map[r][0];
   document.getElementById('aiRole').textContent=map[r][1];
+  // 切角色时重置对话状态
+  aiState={phase:'idle',qIdx:0,asked:0,answered:0,role:r,day:aiDay};
+  updateEvalBtn();
 }
 document.querySelectorAll('.role-pill').forEach(b=>b.addEventListener('click',()=>setRole(b.dataset.role)));
 function aiSetDay(day){
@@ -1443,7 +1451,7 @@ function sendChat(){
   const txt=inp.value.trim(); if(!txt)return;
   inp.value='';
   addMsg('user',txt);
-  askAI();
+  askAI(txt,false);
 }
 function addMsg(who,text){
   const body=document.getElementById('chatBody');
@@ -1453,10 +1461,17 @@ function addMsg(who,text){
   body.appendChild(div);
   body.scrollTop=body.scrollHeight;
 }
-function askAI(){
+function updateEvalBtn(){
+  const btn=document.getElementById('aiEvalBtn');
+  if(!btn)return;
+  // 有用户回答且尚未评估时启用
+  const hasUserAnswer=aiState.answered>0;
+  btn.disabled=!hasUserAnswer;
+}
+function getAIState(){ return {phase:aiState.phase,asked:aiState.asked,answered:aiState.answered,qIdx:aiState.qIdx}; }
+function askAI(userText, isTrigger){
   const sendBtn=document.getElementById('sendBtn');
   sendBtn.disabled=true;
-  // 组装上下文
   const day=aiDay, d=DAILY[day];
   const st=S.current[day]||{};
   const masterN=Object.values(S.checkMaster||{}).filter(v=>v===1).length;
@@ -1468,19 +1483,18 @@ function askAI(){
 今天考核标准：${(d.check||[]).join('；')}
 你现在扮演【${aiRole}】角色。${aiRole==='考官'?'按L3四维度出题并评分，用大白话，先给提示再给答案':aiRole==='客户'?'扮演国数集团领导，针对方案/汇报提刁钻但合理的问题，点评3好3改进':'扮演电信技术交付，从技术可行性角度提问，对齐后给确认/待定清单'}。
 请用中文、简洁、真诚地回复，结合国数集团真实项目（可信数据空间、高质量数据集平台、国数通、采购供应链等）。`;
-  // 收集对话
-  const msgs=[];
-  document.querySelectorAll('#chatBody .msg').forEach(m=>{
-    if(m.classList.contains('user'))msgs.push({role:'user',content:m.textContent});
-    else if(m.classList.contains('bot'))msgs.push({role:'assistant',content:m.textContent});
-  });
-  // 检查配置
   const cfg=S.settings;
   if(cfg.aiMode==='auto'&&cfg.apiUrl&&cfg.apiKey&&cfg.model){
-    callAPI(context,msgs).then(reply=>{addMsg('bot',reply);sendBtn.disabled=false;})
-      .catch(err=>{addMsg('bot','[调用失败] '+err.message+'（已切换离线模式）'); S.settings.aiMode='offline';saveState();offlineAI(context);sendBtn.disabled=false;});
+    const msgs=[];
+    document.querySelectorAll('#chatBody .msg').forEach(m=>{
+      if(m.classList.contains('user'))msgs.push({role:'user',content:m.textContent});
+      else if(m.classList.contains('bot'))msgs.push({role:'assistant',content:m.textContent});
+    });
+    callAPI(context,msgs).then(reply=>{addMsg('bot',reply);if(!isTrigger){aiState.answered++;updateEvalBtn();}sendBtn.disabled=false;})
+      .catch(err=>{addMsg('bot','[调用失败] '+err.message+'（已切换离线模式）'); S.settings.aiMode='offline';saveState();setTimeout(()=>{offlineAI(isTrigger?null:userText);sendBtn.disabled=false;},400);});
   }else{
-    setTimeout(()=>{offlineAI(context);sendBtn.disabled=false;},400);
+    const effectiveText=isTrigger?null:userText;
+    setTimeout(()=>{offlineAI(effectiveText);sendBtn.disabled=false;},400);
   }
 }
 async function callAPI(context,msgs){
@@ -1495,15 +1509,190 @@ async function callAPI(context,msgs){
   const data=await res.json();
   return data.choices[0].message.content;
 }
-function offlineAI(context){
-  // 内置题库，按角色给提示
+/* ---- 离线多轮对话引擎 ---- */
+function offlineAI(userText){
   const day=aiDay,d=DAILY[day];
-  const prompts={
-    考官:`【考官出题 · Day${day}·${d.t}】\n请用大白话回答（选1-2题）：\n\n1. ${(d.check||[])[0]||'说说今天学到的核心概念'}\n2. 今天这个知识点，在国数集团哪个具体项目/场景最适用？为什么？\n3. 如果客户问你"这值多少钱"，你怎么用今天学的回答？\n\n（回完可以点右上角AI评估，我帮你打分。）`,
-    客户:`【客户发问】\n我是国数集团${day>=22?'负责商务的':'业务'}负责人。\n今天学的是${d.t}。请你用2分钟向我说明：\n① 你要解决什么问题？\n② 为什么必须现在做？\n③ 怎么保证落地？\n\n我会用刁钻角度追问，试试吧。`,
-    '技术交付':`【技术对齐】\n今天方案涉及${d.t}。作为技术交付，我想确认3点：\n① 技术可行性有没有硬伤？\n② 工作量怎么估？\n③ 有没有技术风险要提前规避？\n你说，我来杠。`
-  };
-  sendMsg('bot', prompts[aiRole]);
+  if(aiState.role!==aiRole||aiState.day!==day){ aiState={phase:'idle',qIdx:0,asked:0,answered:0,role:aiRole,day:day}; }
+  // 判断是首次出题还是用户回答后追问
+  if(!userText||aiState.phase==='idle'){
+    // 首次出题
+    aiState.phase='asking'; aiState.qIdx=0; aiState.asked=1;
+    sendMsg('bot', offlineQuestion(aiRole,day,d,0));
+    return;
+  }
+  // 用户回答后
+  aiState.answered++;
+  updateEvalBtn();
+  // 根据角色和轮次决定追问还是收尾
+  if(aiRole==='考官'){
+    const checks=d.check||[];
+    if(aiState.qIdx<Math.min(checks.length-1,2)){
+      // 还有下一题
+      aiState.qIdx++;
+      sendMsg('bot', offlineFollowup(aiRole,day,d,aiState.qIdx,userText));
+    }else{
+      // 最后一题回答完，收尾
+      aiState.phase='done';
+      sendMsg('bot', `回答收到。你已经完成了 Day${day} 的全部考核题。\n\n点击右上角「AI评估」按钮，我会基于你的回答给出分项评分和改进建议。`);
+    }
+  }else if(aiRole==='客户'){
+    if(aiState.asked<2){
+      aiState.asked++;
+      sendMsg('bot', offlineClientFollowup(day,d,userText));
+    }else{
+      aiState.phase='done';
+      sendMsg('bot', `好的，我了解了你的方案思路。\n\n点击右上角「AI评估」按钮，我帮你点评3个亮点和3个改进点。`);
+    }
+  }else if(aiRole==='技术交付'){
+    if(aiState.asked<2){
+      aiState.asked++;
+      sendMsg('bot', offlineTechFollowup(day,d,userText));
+    }else{
+      aiState.phase='done';
+      sendMsg('bot', `对齐完毕。我已记录你的方案要点。\n\n点击右上角「AI评估」按钮，给你技术可行性确认/待定清单。`);
+    }
+  }
+}
+function offlineQuestion(role,day,d,qIdx){
+  const checks=d.check||[];
+  if(role==='考官'){
+    const q1=checks[qIdx]||'说说今天学到的核心概念';
+    const q2=qIdx===0?'':(checks[qIdx+1]||'这个知识点在国数集团哪个项目最适用？为什么？');
+    return `【考官出题 · Day${day}·${d.t}】\n请用大白话回答（答完直接发，我会追问下一题）：\n\n第${qIdx+1}题：${q1}${q2?'\n\n下一题预告：'+q2:''}`;
+  }
+  if(role==='客户'){
+    return `【客户发问 · Day${day}】\n我是国数集团${day>=22?'负责商务的':'业务'}负责人。\n今天学的是${d.t}。请你用2分钟向我说明：\n① 你要解决什么问题？\n② 为什么必须现在做？\n③ 怎么保证落地？\n\n（直接回答，我会追问）`;
+  }
+  return `【技术对齐 · Day${day}】\n今天方案涉及${d.t}。作为技术交付，我想确认：\n① 技术可行性有没有硬伤？\n② 工作量怎么估？\n③ 有没有技术风险要提前规避？\n\n（你说，我来杠）`;
+}
+function offlineFollowup(role,day,d,qIdx,userText){
+  const checks=d.check||[];
+  const ack=offlineAck(userText);
+  const q=checks[qIdx]||'如果客户问你"这值多少钱"，你怎么回答？';
+  return `${ack}\n\n下一题（第${qIdx+1}题）：\n${q}`;
+}
+function offlineClientFollowup(day,d,userText){
+  const ack=offlineAck(userText);
+  const qs=['你说的"必须现在做"，如果领导说"预算不够明年再说"你怎么回应？','你的方案落地需要多少人力和周期？有没有 Plan B？','你跟其他厂商比，差异化优势到底在哪？说具体点。'];
+  return `${ack}\n\n追问${aiState.asked}：\n${qs[aiState.asked-1]||'你觉得这个方案最大的风险是什么？你怎么规避？'}`;
+}
+function offlineTechFollowup(day,d,userText){
+  const ack=offlineAck(userText);
+  const qs=['你提到的工作量，前端和后端各需要多少人天？有没有遗漏集成测试？','数据安全和合规这块怎么保证？过等保吗？','上线后运维谁负责？有没有监控和告警方案？'];
+  return `${ack}\n\n技术追问${aiState.asked}：\n${qs[aiState.asked-1]||'你这套方案有没有依赖外部组件？如果有开源组件，出了问题谁兜底？'}`;
+}
+function offlineAck(userText){
+  if(!userText||userText.length<5)return '好的。';
+  // 简短反馈用户回答
+  const len=userText.length;
+  if(len<20)return `你说得比较简短，我理解你的核心意思了。`;
+  if(len<80)return `回答有重点，我理解了你的思路。`;
+  return `回答比较完整，逻辑清晰，我抓到了你的核心要点。`;
+}
+/* ---- AI评估（离线+API通用入口） ---- */
+function aiEvaluate(){
+  const btn=document.getElementById('aiEvalBtn');
+  if(btn)btn.disabled=true;
+  const day=aiDay,d=DAILY[day];
+  const cfg=S.settings;
+  // 收集用户回答
+  const userMsgs=[];
+  document.querySelectorAll('#chatBody .msg.user').forEach(m=>userMsgs.push(m.textContent));
+  if(userMsgs.length===0){toast('请先回答问题再评估');if(btn)btn.disabled=false;return;}
+  if(cfg.aiMode==='auto'&&cfg.apiUrl&&cfg.apiKey&&cfg.model){
+    // API模式：让大模型评估
+    aiEvaluateAPI(day,d,userMsgs).then(scoreHTML=>{addEvalResult(scoreHTML);if(btn)btn.disabled=false;})
+      .catch(err=>{addEvalResult(offlineEvaluate(day,d,userMsgs));if(btn)btn.disabled=false;});
+  }else{
+    setTimeout(()=>{addEvalResult(offlineEvaluate(day,d,userMsgs));if(btn)btn.disabled=false;},600);
+  }
+}
+function addEvalResult(html){
+  const body=document.getElementById('chatBody');
+  const div=document.createElement('div');
+  div.className='msg bot';
+  div.innerHTML=html;
+  body.appendChild(div);
+  body.scrollTop=body.scrollHeight;
+}
+async function aiEvaluateAPI(day,d,userMsgs){
+  const cfg=S.settings;
+  const url=cfg.apiUrl.replace(/\/+$/,'');
+  const checks=d.check||[];
+  const sysPrompt=`你是"千手学习Agent"考官，评估学习者鹏辉的L3认证回答。
+今天考核Day${day}（${d.t}），考核标准：
+${checks.map((c,i)=>(i+1)+'. '+c).join('\n')}
+请根据以下用户回答，给出：
+1. 每个考核维度的评分（1-10分）和一句话点评
+2. 总分
+3. 3条具体改进建议
+严格输出JSON格式：
+{"scores":[{"dim":"维度名","score":数字,"comment":"点评"}],"total":数字,"improvements":["建议1","建议2","建议3"]}`;
+  const userPrompt='用户回答：\n'+userMsgs.join('\n---\n');
+  const res=await fetch(url+'/chat/completions',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','Authorization':'Bearer '+cfg.apiKey},
+    body:JSON.stringify({model:cfg.model,messages:[{role:'system',content:sysPrompt},{role:'user',content:userPrompt}],temperature:0.3})
+  });
+  if(!res.ok)throw new Error('HTTP '+res.status);
+  const data=await res.json();
+  let content=data.choices[0].message.content.trim();
+  const m=content.match(/\{[\s\S]*\}/); if(m)content=m[0];
+  const r=JSON.parse(content);
+  return formatEvalResult(r);
+}
+function offlineEvaluate(day,d,userMsgs){
+  const checks=d.check||[];
+  const allText=userMsgs.join(' ').toLowerCase();
+  const scores=[];
+  checks.forEach((c,i)=>{
+    // 关键词匹配评分：提取考核标准中的核心词
+    const keywords=extractKeywords(c);
+    const hits=keywords.filter(kw=>allText.includes(kw.toLowerCase()));
+    const ratio=keywords.length>0?hits.length/keywords.length:0.5;
+    let score=Math.round(4+ratio*6); // 4-10分
+    if(allText.length<15)score=Math.min(score,5); // 回答太短扣分
+    let comment;
+    if(score>=8)comment='回答覆盖了核心要点，理解到位。';
+    else if(score>=6)comment='基本理解，但部分关键点未提及。';
+    else comment='回答不够充分，建议深入复习这个维度。';
+    scores.push({dim:c,score:score,comment:comment});
+  });
+  const total=Math.round(scores.reduce((s,x)=>s+x.score,0)/Math.max(scores.length,1));
+  const improvements=[];
+  scores.forEach(s=>{
+    if(s.score<7)improvements.push('「'+s.dim+'」得分较低（'+s.score+'分），建议回看当天术语卡片中相关知识点，重点补强。');
+  });
+  if(allText.length<50)improvements.push('回答过于简短，建议结合国数集团真实项目（可信数据空间、高质量数据集平台等）展开说明。');
+  if(improvements.length===0)improvements.push('整体表现不错，继续保持。建议在回答中增加具体案例和数据支撑。');
+  return formatEvalResult({scores,total,improvements});
+}
+function extractKeywords(checkStr){
+  // 从考核标准中提取2-4字关键词
+  const stopWords=['能','可以','说','做','看','的','了','和','与','对','在','有','一个','是否','什么','怎么','如何'];
+  const words=[];
+  const segs=checkStr.replace(/[，、；。：（）()「」""''']/g,' ').split(/\s+/);
+  segs.forEach(s=>{
+    if(s.length>=2&&!stopWords.includes(s))words.push(s);
+    // 再拆2字词
+    if(s.length>=4){ for(let i=0;i<s.length-1;i++){ const w=s.slice(i,i+2); if(!stopWords.includes(w))words.push(w); } }
+  });
+  return words.length?words:[checkStr];
+}
+function formatEvalResult(r){
+  let html='<div style="font-weight:800;font-size:15px;margin-bottom:8px">AI评估报告</div>';
+  html+='<div style="display:flex;flex-direction:column;gap:6px;margin-bottom:10px">';
+  r.scores.forEach(s=>{
+    const color=s.score>=8?'var(--green)':s.score>=6?'var(--gold)':'var(--cinnabar)';
+    html+='<div style="display:flex;align-items:center;gap:8px;font-size:13px">'+
+      '<span class="ai-score" style="background:'+color+';min-width:32px;text-align:center">'+s.score+'分</span>'+
+      '<span style="font-weight:700">'+esc(s.dim)+'</span>'+
+      '<span style="color:var(--ink2);font-size:12px">'+esc(s.comment)+'</span></div>';
+  });
+  html+='</div>';
+  html+='<div style="font-size:14px;font-weight:800;margin-bottom:6px">总分：<span style="color:'+(r.total>=8?'var(--green)':r.total>=6?'var(--gold)':'var(--cinnabar)')+';font-size:18px">'+r.total+'</span> / 10</div>';
+  html+='<div class="ai-feedback"><div style="font-weight:700;margin-bottom:4px">改进建议：</div>'+r.improvements.map(i=>'· '+esc(i)).join('<br>')+'</div>';
+  return html;
 }
 function sendMsg(who,text){
   addMsg(who,text);
