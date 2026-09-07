@@ -265,7 +265,7 @@ body{display:flex;min-height:100vh}
 /* ===== Learning Journey（今日学习流） ===== */
 .jmodal-mask{position:fixed;inset:0;background:rgba(28,26,23,.72);display:none;align-items:center;justify-content:center;z-index:90;padding:24px}
 .jmodal-mask.show{display:flex}
-.jmodal{background:var(--paper);width:100%;max-width:900px;height:min(800px,90vh);display:flex;flex-direction:column;box-shadow:0 30px 80px rgba(0,0,0,.45);border-top:4px solid var(--cinnabar);user-select:none}
+.jmodal{position:relative;background:var(--paper);width:100%;max-width:900px;height:min(800px,90vh);display:flex;flex-direction:column;box-shadow:0 30px 80px rgba(0,0,0,.45);border-top:4px solid var(--cinnabar);user-select:none}
 .jmodal-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 24px;background:var(--card);border-bottom:1px solid var(--line)}
 .jmodal-head .jh-l{display:flex;align-items:center;gap:12px;min-width:0}
 .jmodal-head .st{background:var(--cinnabar);color:#fff;font-size:12px;font-weight:700;letter-spacing:.12em;padding:4px 10px;flex-shrink:0}
@@ -288,6 +288,14 @@ body{display:flex;min-height:100vh}
 .jnav-btn.primary{background:var(--ink);color:var(--paper);border-color:var(--ink)}
 .jnav-btn.primary:hover:not(:disabled){background:var(--cinnabar);border-color:var(--cinnabar)}
 .jstep-txt{font-size:12px;color:var(--ink2);letter-spacing:.3em}
+/* 弹窗内术语浮层 */
+.jm-term-overlay{display:none;position:absolute;inset:0;background:var(--paper);flex-direction:column;z-index:10}
+.jm-term-overlay.show{display:flex}
+.jm-term-overlay .jmto-head{display:flex;align-items:center;gap:14px;padding:14px 24px;background:var(--card);border-bottom:1px solid var(--line);flex-shrink:0}
+.jm-term-overlay .jmto-back{display:flex;align-items:center;gap:6px;padding:9px 18px;font-size:13px;font-weight:700;border:1px solid var(--line);background:#fff;cursor:pointer;transition:.15s;letter-spacing:.04em;white-space:nowrap}
+.jm-term-overlay .jmto-back:hover{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.jm-term-overlay .jmto-title{font-size:15px;font-weight:800;letter-spacing:.04em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.jm-term-overlay .jmto-body{flex:1;overflow-y:auto;padding:22px 26px 26px}
 /* 卡片页 */
 .jpage{display:none}
 .jpage.active{display:block;animation:fadein .28s ease}
@@ -363,6 +371,8 @@ mark{background:transparent;border-bottom:2px solid var(--cinnabar);color:inheri
   .jfoot{padding:10px 16px}
   .jnav-btn{padding:7px 14px;font-size:12px}
   .jstep-txt{display:none}
+  .jmto-body{padding:16px 14px}
+  .jmto-head{padding:10px 16px}
   .set-grid{grid-template-columns:1fr}
   .searchbar{flex-direction:column}
   .searchbar input,.searchbar select{width:100%}
@@ -591,6 +601,32 @@ mark{background:transparent;border-bottom:2px solid var(--cinnabar);color:inheri
       <div class="import-zone" onclick="importData()">点击选择备份 JSON 文件导入</div>
     </div>
 
+<div class="card">
+      <h2><span class="hico">同步</span>多端数据同步</h2>
+      <div class="sub">通过 GitHub Gist 在电脑与手机之间同步学习数据（数据保存在你的 GitHub 账号私有 Gist 中）</div>
+      <div class="set-grid">
+        <div class="set-row"><label>GitHub Token</label><input id="setSyncToken" type="password" placeholder="ghp_…（需勾选 gist 权限）"><div class="hint">Personal Access Token，仅保存在本机浏览器，用于读写你的 Gist</div></div>
+        <div class="set-row"><label>同步方式</label>
+          <select id="setSyncMode">
+            <option value="manual">手动同步（推荐）</option>
+            <option value="auto">自动同步（每次打开页面静默合并）</option>
+          </select>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px">
+        <button class="btn btn-primary" onclick="syncSave()">保存同步配置</button>
+        <button class="btn btn-ghost" onclick="syncUpload()">上传到云端</button>
+        <button class="btn btn-ghost" onclick="syncMerge()">云端合并到本地</button>
+        <button class="btn btn-outline" onclick="syncDownload()">云端覆盖本地</button>
+      </div>
+      <div id="syncStatus" style="font-size:13px;color:var(--ink2);padding:10px 12px;background:var(--card);border:1px dashed var(--line);margin-bottom:8px">尚未同步</div>
+      <div style="font-size:12px;color:var(--ink3);line-height:1.7">
+        获取 Token：GitHub → Settings → Developer settings → Personal access tokens → Generate new token（classic），勾选 <b>gist</b> 权限。<br>
+        「上传」= 本地数据覆盖云端；「合并」= 两端数据取并集（推荐日常使用）；「覆盖」= 云端数据覆盖本地（恢复用）。<br>
+        首次上传会自动创建私有 Gist 并记住 ID，之后无需再操作。
+      </div>
+    </div>
+
     <div class="card">
       <h2><span class="hico">关于</span>关于</h2>
       <div class="sub">千手学习Agent · 智惠工程师(业务顾问方向L3) 30天攻坚</div>
@@ -629,9 +665,15 @@ mark{background:transparent;border-bottom:2px solid var(--cinnabar);color:inheri
         <span class="jstep-txt" id="jmStepTxt">壹 · 暖学</span>
         <button class="jnav-btn primary" id="jmNext" onclick="jStep(1)">下一个 →</button>
       </div>
+      <div id="jmTermOverlay" class="jm-term-overlay">
+        <div class="jmto-head">
+          <button class="jmto-back" onclick="jHideTermOverlay()">← 返回学习</button>
+          <span class="jmto-title" id="jmtoTitle"></span>
+        </div>
+        <div class="jmto-body" id="jmtoBody"></div>
+      </div>
     </div>
   </div>
-
   <!-- Modal -->
   <div class="modal-mask" id="modal">
     <div class="modal">
@@ -1269,22 +1311,56 @@ function backRefHTML(backrefs){
 }
 function jumpTerm(id){
   const t=TERMS.find(x=>x.id===id);if(!t)return;
-  // 1. 关闭所有弹窗（学习流 / 详情模态）
-  if(document.getElementById('jmodal').classList.contains('show')) jClose();
+  // 如果学习流弹窗打开，在弹窗内用浮层显示术语（不离开弹窗）
+  if(document.getElementById('jmodal').classList.contains('show')){
+    jShowTermOverlay(id); return;
+  }
+  // 关闭详情模态（如有）
   const modal=document.getElementById('modal');
   if(modal&&modal.classList.contains('show')) modal.classList.remove('show');
-  // 2. 清空搜索与筛选，确保目标卡片一定可见
+  // 清空搜索与筛选，确保目标卡片一定可见
   const search=document.getElementById('termSearch'); if(search) search.value='';
   const grp=document.getElementById('termGroup'); if(grp) grp.value='all';
   const mst=document.getElementById('termMaster'); if(mst) mst.value='all';
-  // 3. 切换到术语面板（关键：此前未调用 nav 导致面板隐藏）
+  // 切换到术语面板
   window.nav('terms');
   renderTerms();
-  // 4. 等待渲染完成后滚动到目标卡片并高亮
+  // 等待渲染完成后滚动到目标卡片并高亮
   setTimeout(()=>{
     const cards=document.querySelectorAll('.term-card');
     for(const c of cards){ if(c.dataset.tid==String(id)){ c.scrollIntoView({behavior:'smooth',block:'center'}); c.style.boxShadow='0 0 0 3px var(--cinnabar)'; setTimeout(()=>c.style.boxShadow='',2500); break; } }
   },120);
+}
+/* 弹窗内术语浮层 */
+function jShowTermOverlay(id){
+  const t=TERMS.find(x=>x.id===id);if(!t)return;
+  const br=getBackRefs(id);
+  document.getElementById('jmtoTitle').textContent='#'+t.id+' '+t.n;
+  document.getElementById('jmtoBody').innerHTML=
+    '<div class="jplain">'+t.plain+'</div>'+
+    (t.why?'<div class="jtrow"><b>为什么：</b>'+t.why+'</div>':'')+
+    (t.work?'<div class="jtrow"><b>工作体现：</b>'+t.work+'</div>':'')+
+    (t.principle?'<div class="jt-section"><div class="jt-label">基本原理与架构</div><div class="jt-body">'+t.principle+'</div></div>':'')+
+    (t.compare?'<div class="jt-section"><div class="jt-label">同类知识对比</div><div class="jt-body">'+t.compare+'</div></div>':'')+
+    (t.howto?'<div class="jt-section"><div class="jt-label">具体怎么做</div><div class="jt-body">'+t.howto+'</div></div>':'')+
+    (t.refs&&t.refs.length?refChipHTML(t.refs):'')+
+    (br.length?backRefHTML(br):'')+
+    '<div class="jmemo">'+t.memo+'</div>'+
+    '<div class="jmbtns"><button class="'+(S.checkMaster&&S.checkMaster[id]===1?'on':'')+'" onclick="jSetMasterOverlay('+id+',1)">已掌握</button>'+
+    '<button class="'+(!S.checkMaster||S.checkMaster[id]!==1?'on':'')+'" onclick="jSetMasterOverlay('+id+',0)">未掌握</button></div>';
+  const ov=document.getElementById('jmTermOverlay');
+  ov.classList.add('show');
+  ov.querySelector('.jmto-body').scrollTop=0;
+}
+function jHideTermOverlay(){
+  document.getElementById('jmTermOverlay').classList.remove('show');
+}
+function jSetMasterOverlay(id,v){
+  jSetMaster(id,v);
+  var ov=document.getElementById('jmTermOverlay');
+  if(ov.classList.contains('show')){
+    ov.querySelectorAll('.jmbtns button').forEach(function(b){ b.classList.toggle('on', b.textContent===(v?'已掌握':'未掌握')); });
+  }
 }
 function renderTerms(){
   const q=(document.getElementById('termSearch').value||'').toLowerCase();
@@ -1504,6 +1580,15 @@ function renderSettings(){
   document.getElementById('setApiKey').value=s.apiKey||'';
   document.getElementById('setModel').value=s.model||'';
   document.getElementById('setAIMode').value=s.aiMode||'offline';
+  // 同步配置：Token不回显明文，仅提示是否已配置
+  const stEl=document.getElementById('setSyncToken');
+  if(stEl){ stEl.value=''; stEl.placeholder=(s.syncToken?'已配置 Token（如需更换请重新输入）':'ghp_…（需勾选 gist 权限）'); }
+  const smEl=document.getElementById('setSyncMode');
+  if(smEl){ smEl.value=s.syncMode||'manual'; }
+  const st=document.getElementById('syncStatus');
+  if(st&&!st.textContent.trim()||st&&st.textContent==='尚未同步'){
+    st.textContent=s.syncGistId?('已连接 Gist #'+s.syncGistId.slice(0,8)+'…'):'尚未同步';
+  }
 }
 function saveSettings(){
   S.settings={
@@ -1553,6 +1638,126 @@ function resetData(){
 function renderAll(){ renderToday(); renderPlan(); renderTerms(); renderLog(); renderSettings(); }
 
 /* ============================================================
+   GitHub Gist 多端数据同步
+   ============================================================ */
+const GIST_FILE='qianshou_l3_state.json';
+const GIST_DESC='千手学习Agent 学习数据同步';
+let syncGistId=null;
+function syncGetToken(){ return (S.settings.syncToken||'').trim(); }
+function syncGetGistId(){ return (S.settings.syncGistId||'').trim(); }
+function syncSetStatus(msg,err){
+  const el=document.getElementById('syncStatus');
+  if(el){ el.textContent=msg; el.style.borderColor=err?'#C0392B':'var(--line)'; el.style.color=err?'#C0392B':'var(--ink2)'; }
+}
+async function syncApi(path,method,body){
+  const token=syncGetToken(); if(!token) throw new Error('请先填写 GitHub Token');
+  const res=await fetch('https://api.github.com'+path,{
+    method:method||'GET',
+    headers:{'Authorization':'token '+token,'Accept':'application/vnd.github+json'},
+    body:body?JSON.stringify(body):undefined
+  });
+  if(!res.ok){ let msg='HTTP '+res.status; try{ const j=await res.json(); msg=(j.message||msg); }catch(e){} throw new Error(msg); }
+  return res.json();
+}
+function syncMergeData(a,b){
+  // 合并两个状态对象：以较新的为准，逐字段并集
+  const out=JSON.parse(JSON.stringify(a||{}));
+  const bj=b||{};
+  if(!out.settings) out.settings={};
+  // 学习进度 current
+  const curA=a&&a.current?JSON.parse(JSON.stringify(a.current)):{};
+  const curB=bj.current||{};
+  for(const k of Object.keys(curB)){
+    if(!curA[k]){ curA[k]=curB[k]; continue; }
+    // 同一天取“更完整”的记录（done 优先、checkin 次数取大）
+    const A=curA[k], B=curB[k];
+    if(B.done&&!A.done) curA[k]=B;
+    else if(A.done&&!B.done) { /* 保留A */ }
+    else if(!A.done&&!B.done){ /* 合并内部字段 */ curA[k]=Object.assign({},B,A); }
+  }
+  out.current=curA;
+  // 掌握状态并集
+  const cm=Object.assign({}, (a.checkMaster||{}), (bj.checkMaster||{}));
+  out.checkMaster=cm;
+  // 自定义术语并集（按 id）
+  const termsA=a.customTerms||[]; const termsB=bj.customTerms||[];
+  const tmap={}; termsA.forEach(t=>tmap[t.id]=t); termsB.forEach(t=>{ if(!tmap[t.id]) tmap[t.id]=t; });
+  out.customTerms=Object.values(tmap);
+  // 日志并集（按时间戳）
+  const logsA=a.logs||[]; const logsB=bj.logs||[];
+  const lmap={}; logsA.forEach(l=>lmap[l.ts]=l); logsB.forEach(l=>{ if(!lmap[l.ts]) lmap[l.ts]=l; });
+  out.logs=Object.values(lmap).sort((x,y)=>x.ts-y.ts);
+  // 学习天数取大
+  if(!out.meta) out.meta={};
+  const mA=a.meta||{}; const mB=bj.meta||{};
+  out.meta.doneCount=Math.max(mA.doneCount||0,mB.doneCount||0);
+  out.meta.updatedAt=Math.max(mA.updatedAt||0,mB.updatedAt||0);
+  return out;
+}
+async function syncEnsureGist(){
+  if(syncGetGistId()) return syncGetGistId();
+  const g=await syncApi('/gists','POST',{description:GIST_DESC,public:false,files:{'README.md':{content:'千手学习Agent 数据同步文件'}}});
+  const gid=g.id;
+  S.settings.syncGistId=gid; saveState();
+  return gid;
+}
+async function syncFetchRemote(){
+  const gid=syncGetGistId(); if(!gid) return null;
+  const g=await syncApi('/gists/'+gid);
+  const f=g.files&&g.files[GIST_FILE];
+  if(!f) return null;
+  return JSON.parse(f.content);
+}
+async function syncUpload(){
+  syncSetStatus('正在上传…');
+  try{
+    const gid=await syncEnsureGist();
+    const content=JSON.stringify(S,null,2);
+    await syncApi('/gists/'+gid,'PATCH',{files:{[GIST_FILE]:{content}}});
+    localStorage.setItem('qianshou_l3_synced',JSON.stringify(S));
+    syncSetStatus('上传成功 '+new Date().toLocaleTimeString());
+  }catch(e){ syncSetStatus('上传失败：'+e.message,true); }
+}
+async function syncMerge(){
+  syncSetStatus('正在合并…');
+  try{
+    const gid=await syncEnsureGist();
+    const remote=await syncFetchRemote();
+    if(remote){
+      const merged=syncMergeData(S,remote);
+      S=merged; saveState();
+      const content=JSON.stringify(S,null,2);
+      await syncApi('/gists/'+gid,'PATCH',{files:{[GIST_FILE]:{content}}});
+      syncSetStatus('合并成功 '+new Date().toLocaleTimeString());
+      renderAll();
+    }else{
+      await syncUpload();
+    }
+  }catch(e){ syncSetStatus('合并失败：'+e.message,true); }
+}
+async function syncDownload(){
+  syncSetStatus('正在下载…');
+  try{
+    const gid=await syncEnsureGist();
+    const remote=await syncFetchRemote();
+    if(remote){ S=remote; saveState(); syncSetStatus('已覆盖本地 '+new Date().toLocaleTimeString()); renderAll(); }
+    else syncSetStatus('云端无数据',true);
+  }catch(e){ syncSetStatus('下载失败：'+e.message,true); }
+}
+function syncSave(){
+  const el=document.getElementById('setSyncToken');
+  if(el.value.trim()) S.settings.syncToken=el.value.trim();
+  S.settings.syncGistId=S.settings.syncGistId||'';
+  const sm=document.getElementById('setSyncMode');
+  if(sm) S.settings.syncMode=sm.value;
+  saveState(); syncSetStatus('同步配置已保存');
+}
+function syncClear(){
+  S.settings.syncToken=''; S.settings.syncGistId=''; saveState();
+  syncSetStatus('已清除同步配置');
+}
+
+/* ============================================================
    AI 智能生成知识卡片
    ============================================================ */
 async function genCard(){
@@ -1560,23 +1765,26 @@ async function genCard(){
   const txt=inp.value.trim(); if(!txt){toast('请输入知识点');return;}
   const btn=document.getElementById('genBtn');
   const result=document.getElementById('genResult');
-  // 检查是否已存在同名术语
-  const existing=TERMS.find(t=>t.n.includes(txt)||txt.includes(t.n));
-  if(existing){toast('术语库中已有相关知识：#'+existing.id+' '+existing.n);return;}
+  // 检查是否已存在同名术语（仅完全同名才拦截，避免误伤“衍生知识点”）
+  const existing=TERMS.find(t=>t.n===txt.trim());
+  if(existing){toast('术语库中已有同名词条：#'+existing.id+' '+existing.n);return;}
   btn.disabled=true; btn.textContent='AI思考中…';
   result.innerHTML='<div style="padding:20px;text-align:center;color:var(--ink2)">AI正在深度分析「'+esc(txt)+'」并生成知识卡片…</div>';
   const cfg=S.settings;
-  if(cfg.aiMode==='auto'&&cfg.apiUrl&&cfg.apiKey&&cfg.model){
-    try{
-      const card=await genCardAPI(txt);
-      displayGenCard(card,txt);
-    }catch(err){
-      result.innerHTML='<div style="padding:16px;color:var(--cinnabar)">AI生成失败：'+esc(err.message)+'<br><button class="btn btn-outline btn-sm" style="margin-top:8px" onclick="genCardOffline(\''+esc(txt).replace(/'/g,"\\'")+'\')">用离线模式生成</button></div>';
+  try{
+    if(cfg.aiMode==='auto'&&cfg.apiUrl&&cfg.apiKey&&cfg.model){
+      try{
+        const card=await genCardAPI(txt);
+        displayGenCard(card,txt);
+      }catch(err){
+        result.innerHTML='<div style="padding:16px;color:var(--cinnabar)">AI生成失败：'+esc(err.message)+'<br><button class="btn btn-outline btn-sm" style="margin-top:8px" onclick="genCardOfflineFromLast()">用离线模式生成</button></div>';
+      }
+    }else{
+      genCardOffline(txt);
     }
-  }else{
-    genCardOffline(txt);
+  }finally{
+    btn.disabled=false; btn.textContent='生成卡片';
   }
-  btn.disabled=false; btn.textContent='生成卡片';
 }
 
 async function genCardAPI(topic){
@@ -1633,9 +1841,17 @@ function genCardOffline(topic){
   };
   displayGenCard(card,topic,true);
 }
+function genCardOfflineFromLast(){
+  const inp=document.getElementById('genInput');
+  const txt=(inp&&inp.value.trim())||'';
+  if(!txt){toast('请先在输入框填写知识点');return;}
+  genCardOffline(txt);
+}
 
 function displayGenCard(card,rawTopic,isOffline){
   const result=document.getElementById('genResult');
+  // 暂存当前卡片，供"加入术语手册"按钮使用（避免内联JSON转义问题）
+  window._pendingGenCard={card:card,rawTopic:rawTopic||card.n};
   // 匹配refs_hint到实际术语ID
   let matchedRefs=[];
   if(card.refs_hint){
@@ -1664,10 +1880,15 @@ function displayGenCard(card,rawTopic,isOffline){
       <div class="jt-refs"><div class="jt-label">AI推荐关联术语</div>${matchedRefs.length?matchedRefs.map(r=>`<span class="ref-chip" onclick="jumpTerm(${r.id})"><span class="rc-n">#${r.id}</span> ${r.n}<span class="rc-note"> — ${r.note}</span></span>`).join(''):'<span style="color:var(--ink3);font-size:13px">无匹配关联</span>'}</div>
       <div class="memo">${esc(card.memo)}</div>
       <div style="display:flex;gap:10px;margin-top:14px">
-        <button class="btn btn-success" onclick="addGenCardToTerms(${JSON.stringify(card).replace(/"/g,'&quot;').replace(/'/g,'&#39;')},'${rawTopic.replace(/'/g,'\\\'')}')">加入术语手册</button>
-        <button class="btn btn-outline" onclick="document.getElementById('genResult').innerHTML=''">丢弃</button>
+        <button class="btn btn-success" onclick="addPendingGenCard()">加入术语手册</button>
+        <button class="btn btn-outline" onclick="document.getElementById('genResult').innerHTML='';window._pendingGenCard=null">丢弃</button>
       </div>
     </div>`;
+}
+function addPendingGenCard(){
+  const p=window._pendingGenCard; if(!p||!p.card){toast('没有待添加的卡片');return;}
+  addGenCardToTerms(p.card,p.rawTopic);
+  window._pendingGenCard=null;
 }
 
 function addGenCardToTerms(cardJsonStr,rawTopic){
@@ -1747,7 +1968,14 @@ function loadCustomTerms(){
 }
 
 /* 初始化 */
-document.addEventListener('DOMContentLoaded',()=>{loadCustomTerms();renderAll();});
+document.addEventListener('DOMContentLoaded',()=>{loadCustomTerms();renderAll();autoSyncInit();});
+/* 自动同步：若配置了自动模式且有Token，静默合并云端数据 */
+function autoSyncInit(){
+  const s=S.settings||{};
+  if(s.syncMode==='auto'&&s.syncToken&&s.syncGistId){
+    setTimeout(()=>{ syncMerge().then(()=>{ /* 静默完成 */ }); },1500);
+  }
+}
 </script>
 </body>
 </html>
