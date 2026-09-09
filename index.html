@@ -1133,13 +1133,30 @@ function jRender(){
   }
 }
 /* ---- 壹·暖学：术语卡片（点击展开完整信息）+ 今日方法论知识点 ---- */
-/* 术语↔知识点双链：根据知识点内容匹配涉及的术语 */
+/* 术语↔知识点双链：根据知识点内容匹配涉及的术语（用术语名中文部分+英文缩写+常见简称匹配） */
+const TERM_ALIASES={1:['大模型'],2:[],3:[],4:['上下文'],5:['幻觉'],6:['RAG','检索增强'],7:['向量库'],8:['嵌入','Embedding'],9:['Agent','智能体'],10:['提示链'],11:['路由'],12:['并行化'],13:['协调器'],14:['评估器'],15:['工具调用'],16:['多智能体'],17:['反思'],18:['规划'],22:['数据空间'],27:['隐私计算'],28:['沙箱'],33:['流程优化'],35:['API'],36:['微服务'],41:['TCO'],42:['POC报价'],43:['风险四维度','四维度风险'],44:['合规','数据合规'],45:['招投标'],46:['SLA'],47:['运维'],48:['数据飞轮']};
 function kpMatchTerms(kpC, dayTerms){
-  return dayTerms.filter(t=>kpC.includes(t.n));
+  return dayTerms.filter(t=>{
+    const m=t.n.match(/^(.+?)[(（]([A-Za-z]+)[)）/]/);
+    const cnPart=m?m[1]:t.n;
+    const enPart=m?m[2]:'';
+    if(cnPart.length>=3&&kpC.includes(cnPart))return true;
+    if(enPart&&kpC.includes(enPart))return true;
+    const aliases=TERM_ALIASES[t.id]||[];
+    return aliases.some(a=>kpC.includes(a));
+  });
 }
 /* 术语↔知识点双链：根据术语名称匹配关联的知识点 */
-function termMatchKps(termName, dayKps){
-  return dayKps.filter(kp=>kp.c.includes(termName));
+function termMatchKps(term, dayKps){
+  const m=term.n.match(/^(.+?)[(（]([A-Za-z]+)[)）]/);
+  const cnPart=m?m[1]:term.n;
+  const enPart=m?m[2]:'';
+  const aliases=TERM_ALIASES[term.id]||[];
+  return dayKps.filter(kp=>{
+    if(cnPart.length>=3&&kp.c.includes(cnPart))return true;
+    if(enPart&&kp.c.includes(enPart))return true;
+    return aliases.some(a=>kp.c.includes(a));
+  });
 }
 function jPageLearn(page,d,st,done){
   const terms=(d.terms||[]).map(id=>TERMS.find(x=>x.id===id)).filter(Boolean);
@@ -1166,7 +1183,7 @@ function jPageLearn(page,d,st,done){
   const list=page.querySelector('#jmTermList');
   list.innerHTML=terms.map(t=>{
     const br=getBackRefs(t.id);
-    const linkedKps=termMatchKps(t.n, kps);
+    const linkedKps=termMatchKps(t, kps);
     return `
     <div class="jterm" id="jterm${t.id}">
       <div class="jthead" onclick="jToggleTerm(${t.id})">
@@ -1183,7 +1200,10 @@ function jPageLearn(page,d,st,done){
         ${t.howto?`<div class="jt-section"><div class="jt-label">具体怎么做</div><div class="jt-body">${t.howto}</div></div>`:''}
         ${t.refs&&t.refs.length?refChipHTML(t.refs):''}
         ${br.length?backRefHTML(br):''}
-        ${linkedKps.length?`<div class="jk-link"><span class="lk-label">关联知识点</span>${linkedKps.map(kp=>`<span class="jk-chip kp" onclick="jScrollToKp(${kp.t.replace(/'/g,'\\\'')})">${kp.t}</span>`).join('')}</div>`:''}
+        ${linkedKps.length?`<div class="jk-link"><span class="lk-label">关联知识点</span>${linkedKps.map(kp=>{
+          const kpIdx=kps.findIndex(k=>k.t===kp.t);
+          return `<span class="jk-chip kp" onclick="jScrollToKp(${kpIdx})">${kp.t}</span>`;
+        }).join('')}</div>`:''}
         <div class="jmemo">${t.memo}</div>
         <div class="jmbtns">
           <button class="${S.checkMaster&&S.checkMaster[t.id]===1?'on':''}" onclick="jSetMaster(${t.id},1)">已掌握</button>
@@ -1220,18 +1240,14 @@ function jScrollToTerm(id){
   el.scrollIntoView({behavior:'smooth',block:'center'});
 }
 /* 滚动到知识点卡片 */
-function jScrollToKp(title){
-  const cards=document.querySelectorAll('.jkp .jt');
-  for(const c of cards){
-    if(c.textContent.includes(title)){
-      const card=c.closest('.jkp');
-      card.scrollIntoView({behavior:'smooth',block:'center'});
-      card.style.transition='background .3s';
-      card.style.background='#FFF8E8';
-      setTimeout(()=>{card.style.background='';},1200);
-      return;
-    }
-  }
+function jScrollToKp(idx){
+  const cards=document.querySelectorAll('.jkp');
+  if(!cards[idx])return;
+  const card=cards[idx];
+  card.scrollIntoView({behavior:'smooth',block:'center'});
+  card.style.transition='background .3s';
+  card.style.background='#FFF8E8';
+  setTimeout(()=>{card.style.background='';},1200);
 }
 /* ---- 1页：练习 ---- */
 function jPagePractice(page,d,st,done){
@@ -1900,28 +1916,36 @@ ${dayKnowledge}
 }
 function offlineEvaluate(day,d,userMsgs){
   const checks=d.check||[];
-  const allText=userMsgs.join(' ').toLowerCase();
+  const allText=userMsgs.join(' ');
+  const lower=allText.toLowerCase();
   const scores=[];
+  // 场景应用标志词：国数/采购/可信/数据集/国数通/方案/客户/项目/场景
+  const sceneWords=['国数','采购','可信','数据集','国数通','方案','客户','项目','场景','电信','数据空间','智能'];
+  const sceneHits=sceneWords.filter(w=>lower.includes(w.toLowerCase()));
+  const hasScene=sceneHits.length>=1;
   checks.forEach((c,i)=>{
-    // 关键词匹配评分：提取考核标准中的核心词
     const keywords=extractKeywords(c);
-    const hits=keywords.filter(kw=>allText.includes(kw.toLowerCase()));
+    const hits=keywords.filter(kw=>lower.includes(kw.toLowerCase()));
     const ratio=keywords.length>0?hits.length/keywords.length:0.5;
     let score=Math.round(4+ratio*6); // 4-10分
-    if(allText.length<15)score=Math.min(score,5); // 回答太短扣分
+    if(allText.length<15)score=Math.min(score,5);
+    // 有场景应用加分，纯复述概念扣分
+    if(hasScene&&ratio>=0.4)score=Math.min(score+1,10);
+    if(!hasScene&&ratio>=0.6)score=Math.max(score-1,4); // 关键词覆盖高但没有场景=纯复述
     let comment;
-    if(score>=8)comment='回答覆盖了核心要点，理解到位。';
-    else if(score>=6)comment='基本理解，但部分关键点未提及。';
-    else comment='回答不够充分，建议深入复习这个维度。';
+    if(score>=8)comment=hasScene?'回答将知识用到了实际场景中，理解到位。':'回答覆盖了核心要点，但缺少场景应用。';
+    else if(score>=6)comment='基本理解，但部分关键点未提及或缺少场景结合。';
+    else comment='回答不够充分，建议结合国数集团项目场景重新分析。';
     scores.push({dim:c,score:score,comment:comment});
   });
   const total=Math.round(scores.reduce((s,x)=>s+x.score,0)/Math.max(scores.length,1));
   const improvements=[];
+  if(!hasScene)improvements.push('回答中缺少国数集团具体场景，建议把每个知识点都放到实际项目中分析，而不是复述定义。');
   scores.forEach(s=>{
-    if(s.score<7)improvements.push('「'+s.dim+'」得分较低（'+s.score+'分），建议回看当天术语卡片中相关知识点，重点补强。');
+    if(s.score<7)improvements.push('「'+s.dim+'」得分较低（'+s.score+'分），建议结合国数集团项目场景重新理解这个知识点。');
   });
   if(allText.length<50)improvements.push('回答过于简短，建议结合国数集团真实项目（可信数据空间、高质量数据集平台等）展开说明。');
-  if(improvements.length===0)improvements.push('整体表现不错，继续保持。建议在回答中增加具体案例和数据支撑。');
+  if(improvements.length===0)improvements.push('整体表现不错，场景应用意识强。建议继续在回答中增加具体案例和数据支撑。');
   return formatEvalResult({scores,total,improvements});
 }
 function extractKeywords(checkStr){
