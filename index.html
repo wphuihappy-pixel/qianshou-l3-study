@@ -275,6 +275,13 @@ body{display:flex;min-height:100vh}
 .jkp .jt{font-size:14px;font-weight:800;color:var(--cinnabar);margin-bottom:6px;letter-spacing:.03em;display:flex;gap:8px;align-items:center}
 .jkp .jt .tag{font-size:11px;padding:2px 8px;color:#fff;background:var(--gold);letter-spacing:.1em}
 .jkp .jd{font-size:13.5px;color:var(--ink2);line-height:1.8}
+/* 术语↔知识点双链标签 */
+.jk-link{margin-top:8px;padding-top:8px;border-top:1px dashed var(--line);font-size:12px;line-height:1.6}
+.jk-link .lk-label{font-weight:800;color:var(--cinnabar);letter-spacing:.08em;margin-right:6px}
+.jk-chip{display:inline-block;background:var(--cinnabar-soft);border:1px solid #ECD5D1;color:var(--cinnabar);padding:2px 9px;margin:2px 4px 2px 0;font-size:11.5px;cursor:pointer}
+.jk-chip:hover{background:var(--cinnabar);color:#fff}
+.jk-chip.kp{background:#F5EFE0;border-color:#E0D5B0;color:#8A7A3A}
+.jk-chip.kp:hover{background:var(--gold);color:#fff}
 
 /* ===== Learning Journey（今日学习流） ===== */
 .jmodal-mask{position:fixed;inset:0;background:rgba(28,26,23,.72);display:none;align-items:center;justify-content:center;z-index:90;padding:24px}
@@ -1126,6 +1133,14 @@ function jRender(){
   }
 }
 /* ---- 壹·暖学：术语卡片（点击展开完整信息）+ 今日方法论知识点 ---- */
+/* 术语↔知识点双链：根据知识点内容匹配涉及的术语 */
+function kpMatchTerms(kpC, dayTerms){
+  return dayTerms.filter(t=>kpC.includes(t.n));
+}
+/* 术语↔知识点双链：根据术语名称匹配关联的知识点 */
+function termMatchKps(termName, dayKps){
+  return dayKps.filter(kp=>kp.c.includes(termName));
+}
 function jPageLearn(page,d,st,done){
   const terms=(d.terms||[]).map(id=>TERMS.find(x=>x.id===id)).filter(Boolean);
   const kps=KNOWLEDGE[jDay]||[];   // 今天的方法论知识点
@@ -1138,16 +1153,20 @@ function jPageLearn(page,d,st,done){
       <div class="jk-wrap">
         <div class="jk-head"><span class="st">知识点</span><span class="t">今日方法论</span></div>
         <div class="jk-note">这些是今天要掌握的方法论、框架、模板，AI陪练出题和评估都会围绕它们展开：</div>
-        ${kps.map((kp,i)=>`
+        ${kps.map((kp,i)=>{
+          const linked=kpMatchTerms(kp.c, terms);
+          return `
           <div class="jkp">
             <div class="jt"><span class="tag">${String(i+1).padStart(2,'0')}</span>${kp.t}</div>
             <div class="jd">${kp.c}</div>
-          </div>`).join('')}
+            ${linked.length?`<div class="jk-link"><span class="lk-label">涉及术语</span>${linked.map(t=>`<span class="jk-chip" onclick="jScrollToTerm(${t.id})">#${t.id} ${t.n}</span>`).join('')}</div>`:''}
+          </div>`}).join('')}
       </div>`:''}
     ${done?'<div class="jdone-banner show">今日已打卡 · 温故知新</div>':''}`;
   const list=page.querySelector('#jmTermList');
   list.innerHTML=terms.map(t=>{
     const br=getBackRefs(t.id);
+    const linkedKps=termMatchKps(t.n, kps);
     return `
     <div class="jterm" id="jterm${t.id}">
       <div class="jthead" onclick="jToggleTerm(${t.id})">
@@ -1164,6 +1183,7 @@ function jPageLearn(page,d,st,done){
         ${t.howto?`<div class="jt-section"><div class="jt-label">具体怎么做</div><div class="jt-body">${t.howto}</div></div>`:''}
         ${t.refs&&t.refs.length?refChipHTML(t.refs):''}
         ${br.length?backRefHTML(br):''}
+        ${linkedKps.length?`<div class="jk-link"><span class="lk-label">关联知识点</span>${linkedKps.map(kp=>`<span class="jk-chip kp" onclick="jScrollToKp(${kp.t.replace(/'/g,'\\\'')})">${kp.t}</span>`).join('')}</div>`:''}
         <div class="jmemo">${t.memo}</div>
         <div class="jmbtns">
           <button class="${S.checkMaster&&S.checkMaster[t.id]===1?'on':''}" onclick="jSetMaster(${t.id},1)">已掌握</button>
@@ -1191,6 +1211,27 @@ function jSetMaster(id,v){
     el.querySelectorAll('.jmbtns button').forEach(b=>b.classList.toggle('on', b.textContent===(v?'已掌握':'未掌握')));
   }
   toast(v?'已标记掌握':'已标记未掌握');
+}
+/* 滚动到术语卡并展开 */
+function jScrollToTerm(id){
+  const el=document.getElementById('jterm'+id);
+  if(!el)return;
+  el.classList.add('open');
+  el.scrollIntoView({behavior:'smooth',block:'center'});
+}
+/* 滚动到知识点卡片 */
+function jScrollToKp(title){
+  const cards=document.querySelectorAll('.jkp .jt');
+  for(const c of cards){
+    if(c.textContent.includes(title)){
+      const card=c.closest('.jkp');
+      card.scrollIntoView({behavior:'smooth',block:'center'});
+      card.style.transition='background .3s';
+      card.style.background='#FFF8E8';
+      setTimeout(()=>{card.style.background='';},1200);
+      return;
+    }
+  }
 }
 /* ---- 1页：练习 ---- */
 function jPagePractice(page,d,st,done){
@@ -1671,8 +1712,14 @@ function askAI(userText, isTrigger){
 
 ${dayKnowledge}
 
-重要要求：你的出题、追问、点评必须紧扣上述当天学过的术语和知识点。不要出与今天学习内容无关的题。每道题应考察上述某个具体术语的理解或应用。
-你现在扮演【${aiRole}】角色。${aiRole==='考官'?'按L3四维度出题并评分，用大白话，先给提示再给答案。出题必须引用上述术语的具体概念。':aiRole==='客户'?'扮演国数集团领导，针对今天学的内容在方案/汇报中的应用提刁钻但合理的问题，点评3好3改进。':'扮演电信技术交付，从技术可行性角度提问今天涉及的技术概念，对齐后给确认/待定清单。'}。
+重要要求：你的出题、追问、点评必须紧扣上述当天学过的术语和知识点。不要出与今天学习内容无关的题。
+【出题方式——场景应用题，不要概念复述题】：
+- 不要直接问"XX是什么""请复述XX的定义"这类背诵题。
+- 要给出一个国数集团真实业务场景，让学习者用当天术语/知识点去分析判断。
+- 例如不问"AI能力5层级是什么"，而问"国数通智能审批系统需要自动调用采购系统API查数据并生成审批建议，这属于AI能力第几层？为什么？"
+- 例如不问"三步法是什么"，而问"有客户想在采购系统中用AI自动打款，用三步法判断该场景适不适合上AI，你的结论是什么？"
+- 每道题都要让学习者把知识用起来，而不是复述知识点内容。
+你现在扮演【${aiRole}】角色。${aiRole==='考官'?'按L3四维度出题并评分，用大白话，先给提示再给答案。出题必须用场景应用题（给国数集团真实场景让学习者用术语/知识点去分析判断），不要出概念复述题。':aiRole==='客户'?'扮演国数集团领导，不要问概念定义，而是给你的实际业务场景，让学习者用今天学的术语/知识点来分析方案可行性，点评3好3改进。':'扮演电信技术交付，从技术可行性角度提问，给出国数集团实际技术场景让学习者用今天学的知识判断可行性，对齐后给确认/待定清单。'}。
 请用中文、简洁、真诚地回复，结合国数集团真实项目（可信数据空间、高质量数据集平台、国数通、采购供应链等）。`;
   const cfg=S.settings;
   if(cfg.aiMode==='auto'&&cfg.apiUrl&&cfg.apiKey&&cfg.model){
@@ -1747,9 +1794,20 @@ function offlineAI(userText){
 function offlineQuestion(role,day,d,qIdx){
   const checks=d.check||[];
   if(role==='考官'){
-    const q1=checks[qIdx]||'说说今天学到的核心概念';
-    const q2=qIdx===0?'':(checks[qIdx+1]||'这个知识点在国数集团哪个项目最适用？为什么？');
-    return `【考官出题 · Day${day}·${d.t}】\n请用大白话回答（答完直接发，我会追问下一题）：\n\n第${qIdx+1}题：${q1}${q2?'\n\n下一题预告：'+q2:''}`;
+    /* 把考核标准转成场景应用题（离线模板，无法调AI时用） */
+    const kps=KNOWLEDGE[day]||[];
+    const kpTitle=qIdx<kps.length?kps[qIdx].t:'今日综合';
+    const scenarios={
+      1:'国数通智能助手能自动查采购系统数据、生成审批建议并提交——你觉得这属于AI能力第几层？为什么？如果客户问"它能不能自己拆任务自己执行"，你怎么回答？',
+      2:'国数集团要把数据资产入表，领导问你数据要素产业链里电信能卡哪几个环节——你怎么分析？1413架构怎么帮你说清电信的定位？',
+      3:'国数通要选大模型，有人说用GPT-4效果最好，有人说用国产星辰——你用选型3维度帮他分析，结论是什么？Token成本怎么估？',
+      4:'国数通要设计智能体，需要做采购审批+合同审查+合规检查三件事——你用Agent设计三步法，选哪种模式组合？为什么不用其他模式？',
+      5:'国数集团要建采购政策问答系统，有人说直接用大模型就行——你用RAG vs直接问答对比框架说服他为什么要用RAG，切分策略你怎么选？'
+    };
+    const q=scenarios[day]||(qIdx<checks.length?
+      `场景题：${checks[qIdx].replace(/能口述|能说出|能画出|能设计|能完成|能识别|能做|能列出|能写/g,'请分析').replace(/及每层典型应用/g,'').replace(/及核心问题/g,'').trim()}——结合国数集团具体项目场景回答`:
+      `场景题：${kpTitle}——在国数集团项目中怎么用？举个例子`);
+    return `【考官出题 · Day${day}·${d.t}】\n请用大白话回答（答完直接发，我会追问下一题）：\n\n第${qIdx+1}题：${q}`;
   }
   if(role==='客户'){
     return `【客户发问 · Day${day}】\n我是国数集团${day>=22?'负责商务的':'业务'}负责人。\n今天学的是${d.t}。请你用2分钟向我说明：\n① 你要解决什么问题？\n② 为什么必须现在做？\n③ 怎么保证落地？\n\n（直接回答，我会追问）`;
@@ -1817,7 +1875,10 @@ ${checks.map((c,i)=>(i+1)+'. '+c).join('\n')}
 
 ${dayKnowledge}
 
-重要要求：评估时必须对照上述当天学过的术语和知识点，判断用户回答是否覆盖了核心概念、原理和应用。如果用户回答中没有提及当天术语的核心要点，应扣分并在改进建议中明确指出。
+重要要求：评估时必须对照上述当天学过的术语和知识点，判断用户回答是否能将知识应用到实际场景中，而不是简单复述概念。
+- 如果用户只是背诵了术语定义但没有说明它在场景中怎么用，应扣分并指出"理解了概念但缺少场景应用"。
+- 如果用户能用自己的话说出术语在国数集团项目中怎么用、为什么这样选，应给高分。
+- 如果用户回答中没有提及当天术语的核心要点，应扣分并在改进建议中明确指出。
 请根据以下用户回答，给出：
 1. 每个考核维度的评分（1-10分）和一句话点评（点评要引用具体术语）
 2. 总分
