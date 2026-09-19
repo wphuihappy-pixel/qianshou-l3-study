@@ -729,6 +729,17 @@ mark{background:transparent;border-bottom:2px solid var(--cinnabar);color:inheri
           </div>
           <div class="hint">选系统音色或选「自定义」填MiniMax控制台的音色ID；扫描可自动检测你账户下哪些音色可用</div>
         </div>
+        <div class="set-row"><label>语速</label>
+          <select id="setTtsSpeed">
+            <option value="0.8">慢速（0.8x）</option>
+            <option value="0.9">稍慢（0.9x）</option>
+            <option value="1.0" selected>正常（1.0x）</option>
+            <option value="1.1">稍快（1.1x）</option>
+            <option value="1.2">快速（1.2x）</option>
+            <option value="1.5">很快（1.5x）</option>
+          </select>
+          <div class="hint">语速越大越快，0.8最慢，1.5最快</div>
+        </div>
         <div class="set-row"><label>自动朗读</label>
           <select id="setTtsAutoPlay">
             <option value="false">关闭（手动点击朗读）</option>
@@ -1209,7 +1220,8 @@ const DEFAULT_STATE = {
   ttsModel:'speech-02-hd',
   ttsVoiceId:'female-shaonv',
   ttsApiUrl:'',
-  ttsAutoPlay:false
+  ttsAutoPlay:false,
+  ttsSpeed:1.0
 };
 let S = loadState();
 
@@ -2309,6 +2321,7 @@ function renderSettings(){
     }
   }
   const ta=document.getElementById('setTtsAutoPlay'); if(ta) ta.value=String(s.ttsAutoPlay||false);
+  const ts=document.getElementById('setTtsSpeed'); if(ts) ts.value=String(s.ttsSpeed||1.0);
   // 同步配置：Token不回显明文，仅提示是否已配置
   const stEl=document.getElementById('setSyncToken');
   if(stEl){ stEl.value=''; stEl.placeholder=(s.syncToken?'已配置 Token（如需更换请重新输入）':'ghp_…（需勾选 gist 权限）'); }
@@ -2329,6 +2342,7 @@ function saveVoiceSettings(){
   S.settings.ttsModel=document.getElementById('setTtsModel').value.trim()||'speech-02-hd';
   S.settings.ttsVoiceId=voiceId;
   S.settings.ttsAutoPlay=document.getElementById('setTtsAutoPlay').value==='true';
+  S.settings.ttsSpeed=parseFloat(document.getElementById('setTtsSpeed').value)||1.0;
   saveState(); toast('语音配置已保存');
 }
 function saveSettings(){
@@ -3070,15 +3084,18 @@ function toggleVoiceInput(){
 }
 
 /* ---- TTS：语音输出 ---- */
-let currentTTS=null, currentTTSBtn=null;
+let currentTTS=null, currentTTSBtn=null, ttsLoading=false;
+function isTTSActive(){ return !!(currentTTS||ttsLoading); }
 function speakMsg(btn,text){
-  if(currentTTS&&currentTTSBtn===btn){ stopSpeak(); return; }
-  if(currentTTS) stopSpeak();
+  if(isTTSActive()&&currentTTSBtn===btn){ stopSpeak(); return; }  // 同一按钮→停止
+  if(isTTSActive()) stopSpeak();                                   // 不同按钮→先停旧的
   speakText(text,btn);
 }
 function speakTerm(id){
   var t=TERMS.find(function(x){return x.id===id;});
   if(!t) return;
+  if(isTTSActive()&&currentTTSBtn&&currentTTSBtn.dataset&&currentTTSBtn.dataset.ttsTerm==String(id)){ stopSpeak(); return; }
+  if(isTTSActive()) stopSpeak();
   var parts=[t.n];
   if(t.plain) parts.push(t.plain);
   if(t.why) parts.push(t.why);
@@ -3088,6 +3105,8 @@ function speakTerm(id){
 function speakKp(idx){
   var kps=KNOWLEDGE[jDay]||[];
   if(!kps[idx]) return;
+  if(isTTSActive()&&currentTTSBtn&&currentTTSBtn.dataset&&currentTTSBtn.dataset.ttsKp==String(idx)){ stopSpeak(); return; }
+  if(isTTSActive()) stopSpeak();
   speakText(kps[idx].t+'。'+kps[idx].c);
 }
 function speakText(text,btn){
@@ -3095,7 +3114,7 @@ function speakText(text,btn){
   var mode=S.settings.ttsMode||'minimax';
   if(mode==='off'){ toast('语音输出已关闭，请在设置中开启'); return; }
   if(btn){ currentTTSBtn=btn; btn.classList.add('playing'); btn.textContent='\u25A0 停止'; }
-  if(mode==='minimax'){ speakMiniMax(text,btn); }
+  if(mode==='minimax'){ ttsLoading=true; speakMiniMax(text,btn); }
   else{ speakBrowser(text,btn); }
 }
 function speakBrowser(text,btn){
@@ -3107,7 +3126,7 @@ function speakBrowser(text,btn){
   speechSynthesis.cancel();
   var utter=new SpeechSynthesisUtterance(text);
   utter.lang='zh-CN';
-  utter.rate=1.0;
+  utter.rate=parseFloat(S.settings.ttsSpeed)||1.0;
   var voices=speechSynthesis.getVoices();
   var cnVoices=voices.filter(function(v){return v.lang&&v.lang.indexOf('zh')===0;});
   var preferred=cnVoices.find(function(v){return /xiao|xiaoxiao|yaoyao|yunjian|yunxi|kangkang|huihui|Microsoft/i.test(v.name);})
@@ -3129,7 +3148,8 @@ function buildTtsRequests(voiceId, text){
   if(!ttsUrl) return [];
   var reqs=[];
   var voice=voiceId||'female-shaonv';
-  var vs={voice_id:voice,speed:1.0,vol:1.0,pitch:0};
+  var speed=parseFloat(cfg.ttsSpeed)||1.0;
+  var vs={voice_id:voice,speed:speed,vol:1.0,pitch:0};
   var as={sample_rate:32000,bitrate:128000,format:'mp3',channel:1};
   var model=cfg.ttsModel||'speech-02-hd';
   if(/dashscope/i.test(ttsUrl)){
@@ -3169,15 +3189,19 @@ function parseTTSResult(data){
   return {error:null,audio:audio};
 }
 async function speakMiniMax(text,btn){
+  ttsLoading=true;
   var cfg=S.settings;
   var reqs=buildTtsRequests(cfg.ttsVoiceId||'female-shaonv', text.slice(0,2000));
   if(!reqs.length){
+    ttsLoading=false;
     toast('请先在设置中配置API地址和Key');
     if(btn) resetTTSBtn(btn);
     return;
   }
   var lastErr=null, voiceErr=false;
   for(var ri=0; ri<reqs.length; ri++){
+    // 如果中途被 stopSpeak 取消，直接退出
+    if(!ttsLoading) return;
     try{
       var r=reqs[ri];
       var res=await fetch(r.url,{
@@ -3185,12 +3209,14 @@ async function speakMiniMax(text,btn){
         headers:{'Content-Type':'application/json','Authorization':'Bearer '+cfg.apiKey},
         body:JSON.stringify(r.body)
       });
+      if(!ttsLoading) return; // 被取消了
       if(!res.ok){
         var e2=await res.text().catch(function(){return '';});
         lastErr=new Error('HTTP '+res.status+' '+e2.slice(0,100));
         continue;
       }
       var data=await res.json();
+      if(!ttsLoading) return; // 被取消了
       var parsed=parseTTSResult(data);
       if(parsed.error){
         if(/voice|音色/i.test(parsed.error)) voiceErr=true;
@@ -3203,12 +3229,13 @@ async function speakMiniMax(text,btn){
       var blob=new Blob([bytes],{type:'audio/mp3'});
       var audioUrl=URL.createObjectURL(blob);
       var audio=new Audio(audioUrl);
-      currentTTS=audio; currentTTSBtn=btn;
+      currentTTS=audio; ttsLoading=false;
       audio.onended=function(){ URL.revokeObjectURL(audioUrl); if(btn) resetTTSBtn(btn); currentTTS=null; currentTTSBtn=null; };
       audio.onerror=function(){ URL.revokeObjectURL(audioUrl); if(btn) resetTTSBtn(btn); currentTTS=null; currentTTSBtn=null; };
       audio.play().catch(function(){ });
       return;
     }catch(err){
+      if(!ttsLoading) return; // 被取消了
       lastErr=err;
       if(err instanceof TypeError){
         lastErr=new Error('网络/跨域错误，请确认端点可访问：'+reqs[ri].url);
@@ -3216,6 +3243,7 @@ async function speakMiniMax(text,btn){
       }
     }
   }
+  ttsLoading=false;
   var errMsg=lastErr?lastErr.message:'未知错误';
   if(voiceErr||/voice.*not exist|not found|无效音色|音色.*不存在|voice not exist/i.test(errMsg)){
     toast('音色ID在当前环境不可用 → 去设置页点「扫描可用音色」自动识别');
@@ -3242,7 +3270,7 @@ async function testSingleVoice(voiceId){
   if(savedModel!=='speech-02-hd') modelList.push('speech-02-hd');
   if(savedModel!=='speech-2.8-hd') modelList.push('speech-2.8-hd');
   var reqs=[];
-  var vs={voice_id:voiceId,speed:1.0,vol:1.0,pitch:0};
+  var vs={voice_id:voiceId,speed:parseFloat(cfg.ttsSpeed)||1.0,vol:1.0,pitch:0};
   var as={sample_rate:32000,bitrate:128000,format:'mp3',channel:1};
   if(/dashscope/i.test(ttsUrl)){
     var dsUrl='https://dashscope.aliyuncs.com/api/v1/services/aigc/multimodal-generation/generation';
@@ -3299,9 +3327,10 @@ async function scanVoices(){
   var sel=document.getElementById('setTtsVoiceId');
   var custom=document.getElementById('setTtsVoiceCustom');
   if(found.length){
-    Array.prototype.forEach.call(sel.options,function(opt){
-      if(opt.value!=='custom') opt.remove();
-    });
+    // 安全删除旧选项：倒序遍历避免 live collection 边删边遍历的 bug
+    for(var oi=sel.options.length-1; oi>=0; oi--){
+      if(sel.options[oi].value!=='custom') sel.remove(oi);
+    }
     var voiceNames={
       'female-shaonv':'少女声','female-tianmei':'甜美女声','female-yujian':'御姐音','female-yujie':'御姐音','female-qingnian':'青年女声',
       'male-qn-qingse':'青年男声','male-qn-jingying':'精英男声','male-chengshu':'成熟男声','male-shenchen':'沉稳男声','male-qingnian':'青年男声',
@@ -3314,12 +3343,11 @@ async function scanVoices(){
       opt.textContent=(voiceNames[v]||v)+(voiceNames[v]?'（'+v+'）':'');
       sel.insertBefore(opt, sel.querySelector('option[value="custom"]'));
     });
+    // 选中第一个可用音色（但不自动保存，让用户手动选后点保存）
     sel.value=found[0];
     if(custom){ custom.value=found[0]; custom.style.display='none'; }
-    S.settings.ttsVoiceId=found[0];
-    saveState();
     if(resEl){
-      resEl.innerHTML='找到 '+found.length+' 个可用音色，已自动选中「'+found[0]+'」 <button class="btn btn-outline btn-sm" onclick="scanPreview()">试听</button>';
+      resEl.innerHTML='找到 '+found.length+' 个可用音色，已选中「'+found[0]+'」。选好音色后请点「保存语音配置」 <button class="btn btn-outline btn-sm" onclick="scanPreview()">试听当前</button>';
     }
   }else{
     if(resEl) resEl.textContent='未找到可用音色。请确认：① TTS模型名（如 speech-02-hd）正确；② 登录 MiniMax 控制台 → 语音合成 → 音色管理 查看可用音色ID填入「自定义」';
@@ -3332,15 +3360,18 @@ function scanPreview(){
   speakText('音色测试，这是当前选用的声音。');
 }
 function stopSpeak(){
+  ttsLoading=false; // 先标记取消，阻止异步请求继续
   if(currentTTS){
     if(window.speechSynthesis&&currentTTS instanceof SpeechSynthesisUtterance){
       speechSynthesis.cancel();
     }else if(currentTTS.pause){
-      currentTTS.pause();
+      try{ currentTTS.pause(); }catch(e){}
+      try{ currentTTS.currentTime=0; }catch(e){}
     }
   }
+  currentTTS=null;
   if(currentTTSBtn) resetTTSBtn(currentTTSBtn);
-  currentTTS=null; currentTTSBtn=null;
+  currentTTSBtn=null;
 }
 function resetTTSBtn(btn){
   if(!btn) return;
