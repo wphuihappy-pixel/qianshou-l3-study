@@ -400,6 +400,83 @@ mark{background:transparent;border-bottom:2px solid var(--cinnabar);color:inheri
   .role-select{justify-content:center}
   .role-pill{padding:6px 14px;font-size:12px}
 }
+/* ===== 难题库按钮（术语卡片内）===== */
+.jmbtns .review-bookmark,.master-btns .review-bookmark{font-weight:700;letter-spacing:.04em;cursor:pointer;transition:.15s;border:1px solid var(--gold);background:#fff;color:var(--gold)}
+.jmbtns .review-bookmark{font-size:12px;padding:5px 14px}
+.master-btns .review-bookmark{font-size:11px;padding:3px 10px}
+.jmbtns .review-bookmark.on,.master-btns .review-bookmark.on{background:var(--gold);color:#fff;border-color:var(--gold)}
+.jmbtns .review-bookmark:hover,.master-btns .review-bookmark:hover{background:var(--gold);color:#fff}
+
+/* ===== 难题库页面 ===== */
+.review-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:18px}
+.review-stat{background:var(--card);border:1px solid var(--line);padding:16px 18px;box-shadow:var(--shadow);text-align:center;border-top:3px solid var(--gold)}
+.review-stat .rs-num{font-size:28px;font-weight:800;font-family:Georgia,"Times New Roman",serif;color:var(--cinnabar)}
+.review-stat .rs-label{font-size:12px;color:var(--ink2);margin-top:4px;letter-spacing:.06em}
+.review-tabs{display:flex;gap:6px;margin-bottom:16px}
+.review-tab{padding:8px 16px;font-size:13px;font-weight:700;border:1px solid var(--line);background:var(--card);color:var(--ink2);cursor:pointer;letter-spacing:.04em}
+.review-tab.active{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.review-tab .rt-count{font-size:11px;color:var(--ink3);margin-left:4px}
+.review-tab.active .rt-count{color:rgba(255,255,255,.6)}
+.review-item{background:var(--card);border:1px solid var(--line);padding:18px 20px;margin-bottom:12px;box-shadow:var(--shadow);border-left:3px solid var(--gold);transition:.15s}
+.review-item.consolidated{border-left-color:var(--green);opacity:.65}
+.review-item .ri-head{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.review-item .ri-num{font-size:11px;font-weight:700;color:#fff;background:var(--ink);padding:2px 8px;flex-shrink:0}
+.review-item .ri-name{font-size:15px;font-weight:800;cursor:pointer}
+.review-item .ri-name:hover{color:var(--cinnabar)}
+.review-item .ri-status{margin-left:auto;font-size:11px;letter-spacing:.06em;padding:2px 10px;flex-shrink:0}
+.review-item .ri-status.pending{background:var(--cinnabar-soft);color:var(--cinnabar)}
+.review-item .ri-status.consolidated{background:#EEF2EE;color:var(--green)}
+.review-item .ri-reason{font-size:13px;color:var(--ink2);background:var(--paper);padding:8px 12px;margin:8px 0;border-left:2px solid var(--gold);line-height:1.6}
+.review-item .ri-meta{font-size:11px;color:var(--ink3);display:flex;gap:14px;margin-bottom:8px;flex-wrap:wrap}
+.review-item .ri-actions{display:flex;gap:8px;flex-wrap:wrap}
+.review-empty{text-align:center;padding:40px 20px;color:var(--ink3)}
+.review-empty .re-icon{font-size:32px;color:var(--line);margin-bottom:12px}
+.review-empty .re-text{font-size:14px}
+
+/* ===== 专题资讯页面 ===== */
+.insight-hero{background:var(--ink);color:#F2EEE6;padding:24px 26px;margin-bottom:20px;position:relative;overflow:hidden}
+.insight-hero::after{content:"";position:absolute;right:-40px;top:-40px;width:180px;height:180px;border-radius:50%;border:1px solid rgba(166,58,43,.25)}
+.insight-hero h2{font-size:20px;font-weight:800;margin-bottom:8px;letter-spacing:.04em}
+.insight-hero p{color:rgba(242,238,230,.7);font-size:13px}
+.insight-topics{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.insight-topic{border:1px solid rgba(242,238,230,.25);padding:5px 14px;font-size:12.5px;cursor:pointer;transition:.15s;color:rgba(242,238,230,.85);background:transparent}
+.insight-topic:hover{border-color:var(--cinnabar);color:#fff}
+.insight-topic.active{background:var(--cinnabar);border-color:var(--cinnabar);color:#fff}
+.insight-platforms{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;margin-bottom:16px}
+.insight-plat{display:flex;align-items:center;gap:10px;padding:12px 14px;background:var(--card);border:1px solid var(--line);box-shadow:var(--shadow);cursor:pointer;transition:.15s;text-decoration:none;color:var(--ink)}
+.insight-plat:hover{transform:translateY(-2px);box-shadow:0 8px 20px rgba(28,26,23,.1);border-color:var(--cinnabar)}
+.insight-plat .ip-ico{font-size:14px;font-weight:800;width:32px;height:32px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#fff;letter-spacing:.02em}
+.insight-plat .ip-info{min-width:0}
+.insight-plat .ip-name{font-size:13px;font-weight:700}
+.insight-plat .ip-desc{font-size:11px;color:var(--ink3)}
+.insight-ai-box{background:var(--card);border:1px solid var(--line);padding:20px 24px;margin-bottom:16px;box-shadow:var(--shadow);border-top:3px solid var(--cinnabar)}
+.insight-ai-box h3{font-size:15px;font-weight:800;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.insight-ai-box h3::before{content:"";width:4px;height:14px;background:var(--cinnabar)}
+.insight-ai-content{font-size:14px;color:var(--ink2);line-height:1.8;white-space:pre-wrap}
+.insight-ai-loading{padding:20px;text-align:center;color:var(--ink3)}
+.insight-section{margin-bottom:20px}
+.insight-section .is-title{font-size:14px;font-weight:800;margin-bottom:10px;display:flex;align-items:center;gap:8px;letter-spacing:.04em}
+.insight-section .is-title::before{content:"";width:3px;height:14px;background:var(--gold)}
+.reading-item{background:var(--card);border:1px solid var(--line);padding:14px 16px;margin-bottom:8px;box-shadow:var(--shadow);display:flex;align-items:flex-start;gap:10px}
+.reading-item .ri-del{font-size:14px;color:var(--ink3);cursor:pointer;flex-shrink:0;padding:2px 6px}
+.reading-item .ri-del:hover{color:var(--cinnabar)}
+.reading-item .ri-content{flex:1;min-width:0}
+.reading-item .ri-title{font-size:13.5px;font-weight:700;color:var(--ink);text-decoration:none;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.reading-item .ri-title:hover{color:var(--cinnabar)}
+.reading-item .ri-meta{font-size:11px;color:var(--ink3);margin-top:2px}
+
+/* ===== 语音功能 ===== */
+.voice-mic{width:52px;background:var(--card);border:1px solid var(--line);color:var(--ink2);font-size:13px;font-weight:700;cursor:pointer;transition:.15s;flex-shrink:0;display:flex;align-items:center;justify-content:center;letter-spacing:.04em}
+.voice-mic:hover{border-color:var(--cinnabar);color:var(--cinnabar)}
+.voice-mic.recording{background:var(--cinnabar);color:#fff;border-color:var(--cinnabar);animation:micPulse 1.2s infinite}
+@keyframes micPulse{0%,100%{opacity:1}50%{opacity:.6}}
+.tts-btn{display:inline-flex;align-items:center;gap:3px;font-size:11px;color:var(--ink3);background:transparent;border:1px solid var(--line);padding:2px 8px;cursor:pointer;margin-top:4px;transition:.15s;letter-spacing:.04em}
+.tts-btn:hover{color:var(--cinnabar);border-color:var(--cinnabar)}
+.tts-btn.playing{color:var(--cinnabar);border-color:var(--cinnabar);background:var(--cinnabar-soft)}
+.tts-term{font-size:11px;padding:4px 10px;border:1px solid var(--line);background:var(--card);color:var(--ink3);cursor:pointer;transition:.15s;letter-spacing:.04em}
+.tts-term:hover{color:var(--cinnabar);border-color:var(--cinnabar)}
+.tts-term.playing{color:var(--cinnabar);border-color:var(--cinnabar);background:var(--cinnabar-soft)}
+.voice-hint{font-size:12px;color:var(--ink3);line-height:1.7;padding:8px 12px;background:var(--paper);border:1px dashed var(--line);margin-top:10px}
 </style>
 </head>
 <body>
@@ -417,12 +494,14 @@ mark{background:transparent;border-bottom:2px solid var(--cinnabar);color:inheri
     <button class="nav-item active" data-view="today"><span class="ico">壹</span><span class="t">今日学习</span></button>
     <button class="nav-item" data-view="plan"><span class="ico">贰</span><span class="t">30天计划</span></button>
     <button class="nav-item" data-view="terms"><span class="ico">叁</span><span class="t">术语手册</span></button>
+    <button class="nav-item" data-view="insights"><span class="ico">肆</span><span class="t">专题资讯</span></button>
     <div class="grouptag">贰 · 陪练与沉淀</div>
-    <button class="nav-item" data-view="ai"><span class="ico">肆</span><span class="t">AI陪练</span></button>
-    <button class="nav-item" data-view="analysis"><span class="ico">伍</span><span class="t">学习分析</span></button>
-    <button class="nav-item" data-view="log"><span class="ico">陆</span><span class="t">学习日志</span></button>
+    <button class="nav-item" data-view="review"><span class="ico">伍</span><span class="t">难题库</span><span class="badge" id="reviewBadge" style="display:none">0</span></button>
+    <button class="nav-item" data-view="ai"><span class="ico">陆</span><span class="t">AI陪练</span></button>
+    <button class="nav-item" data-view="analysis"><span class="ico">柒</span><span class="t">学习分析</span></button>
+    <button class="nav-item" data-view="log"><span class="ico">捌</span><span class="t">学习日志</span></button>
     <div class="grouptag">叁 · 系统</div>
-    <button class="nav-item" data-view="settings"><span class="ico">柒</span><span class="t">设置</span></button>
+    <button class="nav-item" data-view="settings"><span class="ico">玖</span><span class="t">设置</span></button>
   </nav>
   <div class="footer-side">数据本地保存 · 双击即用</div>
 </aside>
@@ -457,8 +536,9 @@ mark{background:transparent;border-bottom:2px solid var(--cinnabar);color:inheri
     </div>
 
     <div class="timeline" id="todayTimeline"></div>
-    <div style="text-align:center;margin:-6px 0 20px">
+    <div style="text-align:center;margin:-6px 0 20px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
       <button class="btn btn-primary" id="btnStartJourney" style="padding:12px 30px;font-size:14px;letter-spacing:.14em">开始今天的学习 →</button>
+      <button class="btn btn-ghost" onclick="nav('insights')" style="padding:12px 24px;font-size:14px;letter-spacing:.1em">今日专题资讯</button>
     </div>
 
     <div class="card">
@@ -550,6 +630,7 @@ mark{background:transparent;border-bottom:2px solid var(--cinnabar);color:inheri
         <div class="chat-body" id="chatBody"></div>
         <div class="chat-input">
           <textarea id="chatInput" placeholder="输入回答后按回车发送（Shift+回车换行）…" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChat()}"></textarea>
+          <button class="voice-mic" id="micBtn" onclick="toggleVoiceInput()" title="语音输入">语音</button>
           <button class="send" id="sendBtn" onclick="sendChat()">→</button>
         </div>
       </div>
@@ -615,6 +696,57 @@ mark{background:transparent;border-bottom:2px solid var(--cinnabar);color:inheri
     </div>
 
     <div class="card">
+      <h2><span class="hico">语音</span>语音能力配置</h2>
+      <div class="sub">语音输入用浏览器内置能力（Chrome/Edge），语音输出可选 MiniMax TTS 或浏览器朗读</div>
+      <div class="set-grid">
+        <div class="set-row"><label>语音输出</label>
+          <select id="setTtsMode">
+            <option value="minimax">MiniMax TTS（真人音色，推荐）</option>
+            <option value="browser">浏览器朗读（免费，音质一般）</option>
+            <option value="off">关闭</option>
+          </select>
+          <div class="hint">MiniMax Speech-02 为全球语音合成双榜第一，接近真人</div>
+        </div>
+        <div class="set-row"><label>MiniMax API 地址</label><input id="setTtsApiUrl" placeholder="留空则复用上方API地址"><div class="hint">仅使用MiniMax TTS时填写，如 https://api.minimaxi.com/v1；留空则自动复用AI配置地址</div></div>
+        <div class="set-row"><label>TTS模型</label><input id="setTtsModel" placeholder="speech-02-hd"><div class="hint">speech-02-hd（高质量）/ speech-02-turbo（快速）</div></div>
+        <div class="set-row"><label>音色</label>
+          <select id="setTtsVoiceId" onchange="document.getElementById('setTtsVoiceCustom').style.display=(this.value==='custom')?'':'none';if(this.value!=='custom')document.getElementById('setTtsVoiceCustom').value=this.value">
+            <option value="female-shaonv">少女声（甜美）</option>
+            <option value="female-tianmei">甜美女声</option>
+            <option value="female-yujie">御姐音（知性）</option>
+            <option value="male-qn-qingse">青年男声（清澈磁性）</option>
+            <option value="male-chengshu">成熟男声（沉稳）</option>
+            <option value="audiobook_male_1">有声书男声（最自然）</option>
+            <option value="audiobook_female_1">有声书女声（最自然）</option>
+            <option value="presenter_male">男主播（播音腔）</option>
+            <option value="presenter_female">女主播（播音腔）</option>
+            <option value="custom">自定义…</option>
+          </select>
+          <input id="setTtsVoiceCustom" placeholder="输入自定义音色ID" style="margin-top:6px;display:none">
+          <div style="display:flex;align-items:center;gap:8px;margin-top:6px">
+            <button class="btn btn-outline btn-sm" onclick="scanVoices()" id="scanVoiceBtn">扫描可用音色</button>
+            <span id="scanVoiceResult" style="font-size:12px;color:var(--ink3)"></span>
+          </div>
+          <div class="hint">选系统音色或选「自定义」填MiniMax控制台的音色ID；扫描可自动检测你账户下哪些音色可用</div>
+        </div>
+        <div class="set-row"><label>自动朗读</label>
+          <select id="setTtsAutoPlay">
+            <option value="false">关闭（手动点击朗读）</option>
+            <option value="true">开启（AI回复后自动朗读）</option>
+          </select>
+          <div class="hint">开启后AI陪练每次回复自动语音播报</div>
+        </div>
+      </div>
+      <button class="btn btn-primary" onclick="saveVoiceSettings()">保存语音配置</button>
+      <button class="btn btn-outline" onclick="testTTS()">测试朗读</button>
+      <div class="voice-hint">
+        <b>语音输入</b>：点击陪练输入框旁「语音」按钮，浏览器会自动识别你的语音并转为文字。需使用 Chrome 或 Edge 浏览器。<br>
+        <b>MiniMax TTS</b>：复用上方AI配置的API地址和Key，调用 /t2a_v2 接口。如果提示「voice id not exist」，说明音色ID在你的账户中不存在，点击「扫描可用音色」自动查找，或登录 MiniMax 控制台 → 语音合成 → 音色管理 查看可用音色ID。<br>
+        <b>朗读入口</b>：AI回复消息下方、术语卡片按钮区、知识点卡片右侧均有「朗读」按钮。
+      </div>
+    </div>
+
+    <div class="card">
       <h2><span class="hico">数据</span>数据管理</h2>
       <div class="sub">所有学习数据本地保存，可随时备份或迁移</div>
       <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px">
@@ -659,6 +791,36 @@ mark{background:transparent;border-bottom:2px solid var(--cinnabar);color:inheri
         三大原则：倒着学（先动手再补理论）· 学的就是做的（取材真实项目）· 一个Agent当陪练。<br>
         四维能力权重：场景挖掘20% / 调研分析25% / 方案落地40% / 商务策略15%。
       </p>
+    </div>
+  </section>
+
+  <!-- ===== REVIEW BOX ===== -->
+  <section class="panel" id="panel-review">
+    <div class="review-stats" id="reviewStats"></div>
+    <div class="card">
+      <h2><span class="hico">复盘</span>难题库</h2>
+      <div class="sub">存下“觉得懂了但怕以后忘”的术语，定期回看巩固。学习时点击术语卡片上的“★ 难题库”按钮即可收藏</div>
+      <div class="review-tabs" id="reviewTabs">
+        <button class="review-tab active" data-filter="pending" onclick="renderReviewBox('pending')">待复盘<span class="rt-count" id="rtPending">0</span></button>
+        <button class="review-tab" data-filter="consolidated" onclick="renderReviewBox('consolidated')">已巩固<span class="rt-count" id="rtConsolidated">0</span></button>
+        <button class="review-tab" data-filter="all" onclick="renderReviewBox('all')">全部<span class="rt-count" id="rtAll">0</span></button>
+      </div>
+      <div id="reviewList"></div>
+    </div>
+  </section>
+
+  <!-- ===== INSIGHTS ===== -->
+  <section class="panel" id="panel-insights">
+    <div class="insight-hero">
+      <h2>专题资讯</h2>
+      <p>基于今日所学术语和知识点，一键搜索全球技术社区最热文章</p>
+      <div class="insight-topics" id="insightTopics"></div>
+    </div>
+    <div id="insightContent"></div>
+    <div class="card">
+      <h2><span class="hico">收藏</span>阅读清单</h2>
+      <div class="sub">收藏有价值的外部文章链接，随时回看</div>
+      <div id="readingList"></div>
     </div>
   </section>
 
@@ -1040,7 +1202,14 @@ const DEFAULT_STATE = {
   checkMaster:{},      // {termId: 0|1}
   checkins:[],        // [{date, day, score, level}]
   logs:[],            // [{date, mood, body}]
-  streak:0,lastCheckin:''
+  streak:0,lastCheckin:'',
+  reviewBox:{},       // {termId: {savedDate, reason, status:'pending'|'consolidated', lastReview, notes}}
+  readingList:[],      // [{url, title, topic, savedDate}]
+  ttsMode:'minimax',    // 'minimax' | 'browser' | 'off'
+  ttsModel:'speech-02-hd',
+  ttsVoiceId:'female-shaonv',
+  ttsApiUrl:'',
+  ttsAutoPlay:false
 };
 let S = loadState();
 
@@ -1065,7 +1234,7 @@ function esc(s){ return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&
 /* ============================================================
    导航
    ============================================================ */
-const TITLES={today:'今日学习',plan:'30天计划',terms:'术语手册',ai:'AI陪练',analysis:'学习分析',log:'学习日志',settings:'设置'};
+const TITLES={today:'今日学习',plan:'30天计划',terms:'术语手册',insights:'专题资讯',review:'难题库',ai:'AI陪练',analysis:'学习分析',log:'学习日志',settings:'设置'};
 function nav(view){
   document.querySelectorAll('.nav-item').forEach(b=>b.classList.toggle('active', b.dataset.view===view));
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
@@ -1076,6 +1245,8 @@ function nav(view){
   if(view==='plan') renderPlan();
   if(view==='terms') renderTerms();
   if(view==='analysis') renderAnalysis();
+  if(view==='review') renderReviewBox();
+  if(view==='insights') renderInsights();
   if(view==='ai') initAIChat();
   if(view==='log') renderLog();
 }
@@ -1200,12 +1371,15 @@ function jPageLearn(page,d,st,done){
           const linked=kpMatchTerms(kp.c, terms);
           return `
           <div class="jkp">
-            <div class="jt"><span class="tag">${String(i+1).padStart(2,'0')}</span>${kp.t}</div>
+            <div class="jt"><span class="tag">${String(i+1).padStart(2,'0')}</span>${kp.t}<button class="tts-term" onclick="speakKp(${i})" title="朗读此知识点" style="float:right">▶ 朗读</button></div>
             <div class="jd">${kp.c}</div>
             ${linked.length?`<div class="jk-link"><span class="lk-label">涉及术语</span>${linked.map(t=>`<span class="jk-chip" onclick="jScrollToTerm(${t.id})">#${t.id} ${t.n}</span>`).join('')}</div>`:''}
           </div>`}).join('')}
       </div>`:''}
-    ${done?'<div class="jdone-banner show">今日已打卡 · 温故知新</div>':''}`;
+    ${done?'<div class="jdone-banner show">今日已打卡 · 温故知新</div>':''}
+    <div style="margin-top:14px;text-align:center;padding-bottom:8px">
+      <button class="btn btn-ghost" onclick="jClose();window.nav('insights')">查看今日专题资讯 →</button>
+    </div>`;
   const list=page.querySelector('#jmTermList');
   list.innerHTML=terms.map(t=>{
     const br=getBackRefs(t.id);
@@ -1234,6 +1408,8 @@ function jPageLearn(page,d,st,done){
         <div class="jmbtns">
           <button class="${S.checkMaster&&S.checkMaster[t.id]===1?'on':''}" onclick="jSetMaster(${t.id},1)">已掌握</button>
           <button class="${!S.checkMaster||S.checkMaster[t.id]!==1?'on':''}" onclick="jSetMaster(${t.id},0)">未掌握</button>
+          <button class="review-bookmark ${isInReviewBox(t.id)?'on':''}" onclick="toggleReviewBox(${t.id})">★ 难题库</button>
+          <button class="tts-term" onclick="speakTerm(${t.id})" title="朗读此术语">▶ 朗读</button>
         </div>
       </div>
     </div>`}).join('')||'<div style="color:var(--ink2);padding:20px">今天没有指定术语，直接进入练习。</div>';
@@ -1590,7 +1766,9 @@ function jShowTermOverlay(id){
     (br.length?backRefHTML(br):'')+
     '<div class="jmemo">'+t.memo+'</div>'+
     '<div class="jmbtns"><button class="'+(S.checkMaster&&S.checkMaster[id]===1?'on':'')+'" onclick="jSetMasterOverlay('+id+',1)">已掌握</button>'+
-    '<button class="'+(!S.checkMaster||S.checkMaster[id]!==1?'on':'')+'" onclick="jSetMasterOverlay('+id+',0)">未掌握</button></div>';
+    '<button class="'+(!S.checkMaster||S.checkMaster[id]!==1?'on':'')+'" onclick="jSetMasterOverlay('+id+',0)">未掌握</button>'+
+    '<button class="review-bookmark '+(isInReviewBox(id)?'on':'')+'" onclick="toggleReviewBox('+id+')">★ 难题库</button>'+
+    '<button class="tts-term" onclick="speakTerm('+id+')" title="朗读">▶ 朗读</button></div>';
   const ov=document.getElementById('jmTermOverlay');
   ov.classList.add('show');
   ov.querySelector('.jmto-body').scrollTop=0;
@@ -1643,10 +1821,12 @@ function renderTerms(){
       ${br.length?`<div class="refs-strip" style="margin-top:4px">${br.map(b=>`<span class="ref-mini" style="background:#EEF2EE;color:var(--green);border-color:#D5E3D8" onclick="jumpTerm(${b.id})">${b.n}</span>`).join('')}</div>`:''}
       <div class="memo">${hl(t.memo)}</div>
       <div class="foot">
-        <span class="master">${S.checkMaster&&S.checkMaster[t.id]===1?'已掌握':'未掌握'}</span>
+        <span class="master">${S.checkMaster&&S.checkMaster[t.id]===1?'已掌握':'未掌握'}${isInReviewBox(t.id)?' ★':''}</span>
         <div class="master-btns">
           <button class="${S.checkMaster&&S.checkMaster[t.id]===1?'on':''}" onclick="setMaster(${t.id},1)">掌握</button>
           <button class="${!S.checkMaster||S.checkMaster[t.id]!==1?'on':''}" onclick="setMaster(${t.id},0)">未掌握</button>
+          <button class="review-bookmark ${isInReviewBox(t.id)?'on':''}" onclick="toggleReviewBox(${t.id})" title="存入难题库">★</button>
+          <button class="tts-term" onclick="speakTerm(${t.id})" title="朗读">▶</button>
         </div>
       </div>
     </div>`}).join(''):'<div style="color:var(--ink2);text-align:center;padding:30px">没有匹配的术语</div>';
@@ -1696,7 +1876,23 @@ function addMsg(who,text){
   const body=document.getElementById('chatBody');
   const div=document.createElement('div');
   div.className='msg '+who;
-  div.textContent=text;
+  if(who==='bot'){
+    var span=document.createElement('span');
+    span.className='msg-text';
+    span.textContent=text;
+    div.appendChild(span);
+    var btn=document.createElement('button');
+    btn.className='tts-btn';
+    btn.textContent='\u25B6 \u6717\u8BFB';
+    btn.title='点击朗读';
+    (function(t,b){b.onclick=function(){speakMsg(b,t);};})(text,btn);
+    div.appendChild(btn);
+    if(S.settings&&S.settings.ttsAutoPlay){
+      setTimeout(function(){speakText(text);},300);
+    }
+  }else{
+    div.textContent=text;
+  }
   body.appendChild(div);
   body.scrollTop=body.scrollHeight;
 }
@@ -1910,7 +2106,19 @@ function addEvalResult(html){
   const body=document.getElementById('chatBody');
   const div=document.createElement('div');
   div.className='msg bot';
-  div.innerHTML=html;
+  var wrap=document.createElement('div');
+  wrap.className='msg-text';
+  wrap.innerHTML=html;
+  div.appendChild(wrap);
+  var btn=document.createElement('button');
+  btn.className='tts-btn';
+  btn.textContent='\u25B6 \u6717\u8BFB';
+  btn.title='点击朗读';
+  btn.onclick=function(){
+    var t=wrap?wrap.textContent:'';
+    speakMsg(btn,t);
+  };
+  div.appendChild(btn);
   body.appendChild(div);
   body.scrollTop=body.scrollHeight;
 }
@@ -2084,6 +2292,23 @@ function renderSettings(){
   document.getElementById('setApiKey').value=s.apiKey||'';
   document.getElementById('setModel').value=s.model||'';
   document.getElementById('setAIMode').value=s.aiMode||'offline';
+  // 语音配置
+  const tm=document.getElementById('setTtsMode'); if(tm) tm.value=s.ttsMode||'minimax';
+  const tua=document.getElementById('setTtsApiUrl'); if(tua) tua.value=s.ttsApiUrl||'';
+  const tdm=document.getElementById('setTtsModel'); if(tdm) tdm.value=s.ttsModel||'speech-02-hd';
+  const tvid=(s.ttsVoiceId||'female-shaonv');
+  const tv=document.getElementById('setTtsVoiceId');
+  const tvc=document.getElementById('setTtsVoiceCustom');
+  if(tv&&tvc){
+    var presetFound=false;
+    Array.prototype.forEach.call(tv.options,function(opt){ if(opt.value===tvid){ presetFound=true; } });
+    if(presetFound&&tvid!=='custom'){
+      tv.value=tvid; tvc.style.display='none'; tvc.value=tvid;
+    }else{
+      tv.value='custom'; tvc.style.display=''; tvc.value=tvid;
+    }
+  }
+  const ta=document.getElementById('setTtsAutoPlay'); if(ta) ta.value=String(s.ttsAutoPlay||false);
   // 同步配置：Token不回显明文，仅提示是否已配置
   const stEl=document.getElementById('setSyncToken');
   if(stEl){ stEl.value=''; stEl.placeholder=(s.syncToken?'已配置 Token（如需更换请重新输入）':'ghp_…（需勾选 gist 权限）'); }
@@ -2094,13 +2319,25 @@ function renderSettings(){
     st.textContent=s.syncGistId?('已连接 Gist #'+s.syncGistId.slice(0,8)+'…'):'尚未同步';
   }
 }
+function saveVoiceSettings(){
+  const tv=document.getElementById('setTtsVoiceId');
+  const tvc=document.getElementById('setTtsVoiceCustom');
+  let voiceId=tv.value;
+  if(tv.value==='custom'&&tvc) voiceId=tvc.value.trim()||'female-shaonv';
+  S.settings.ttsMode=document.getElementById('setTtsMode').value;
+  S.settings.ttsApiUrl=document.getElementById('setTtsApiUrl').value.trim();
+  S.settings.ttsModel=document.getElementById('setTtsModel').value.trim()||'speech-02-hd';
+  S.settings.ttsVoiceId=voiceId;
+  S.settings.ttsAutoPlay=document.getElementById('setTtsAutoPlay').value==='true';
+  saveState(); toast('语音配置已保存');
+}
 function saveSettings(){
-  S.settings={
+  S.settings=Object.assign({},S.settings,{
     apiUrl:document.getElementById('setApiUrl').value.trim(),
     apiKey:document.getElementById('setApiKey').value.trim(),
     model:document.getElementById('setModel').value.trim(),
     aiMode:document.getElementById('setAIMode').value
-  };
+  });
   saveState(); toast('配置已保存');
 }
 async function testAI(){
@@ -2139,7 +2376,7 @@ function resetData(){
     S=JSON.parse(JSON.stringify(DEFAULT_STATE)); saveState(); toast('已清空'); renderAll();
   }
 }
-function renderAll(){ renderToday(); renderPlan(); renderTerms(); renderLog(); renderSettings(); }
+function renderAll(){ renderToday(); renderPlan(); renderTerms(); renderLog(); renderSettings(); renderReviewBox(); renderInsights(); }
 
 /* ============================================================
    GitHub Gist 多端数据同步
@@ -2191,12 +2428,27 @@ function syncMergeData(a,b){
   const logsA=a.logs||[]; const logsB=bj.logs||[];
   const lmap={}; logsA.forEach(l=>lmap[l.ts]=l); logsB.forEach(l=>{ if(!lmap[l.ts]) lmap[l.ts]=l; });
   out.logs=Object.values(lmap).sort((x,y)=>x.ts-y.ts);
+  // 难题库并集（保留较新的记录）
+  const rbA=a.reviewBox||{}; const rbB=bj.reviewBox||{};
+  const rbKeys=new Set([...Object.keys(rbA),...Object.keys(rbB)]);
+  const rbOut={};
+  rbKeys.forEach(k=>{
+    const ra=rbA[k], rb=rbB[k];
+    if(!ra) rbOut[k]=rb;
+    else if(!rb) rbOut[k]=ra;
+    else rbOut[k]=(ra.savedDate||'').localeCompare(rb.savedDate||'')>=0?ra:rb;
+  });
+  out.reviewBox=rbOut;
+  // 阅读清单并集（按URL去重）
+  const rlA=a.readingList||[]; const rlB=bj.readingList||[];
+  const rlMap={}; rlA.forEach(r=>rlMap[r.url]=r); rlB.forEach(r=>{if(!rlMap[r.url])rlMap[r.url]=r;});
+  out.readingList=Object.values(rlMap);
   // 学习天数取大
   if(!out.meta) out.meta={};
   const mA=a.meta||{}; const mB=bj.meta||{};
   out.meta.doneCount=Math.max(mA.doneCount||0,mB.doneCount||0);
   out.meta.updatedAt=Math.max(mA.updatedAt||0,mB.updatedAt||0);
-  return out;
+  return out;;
 }
 async function syncEnsureGist(){
   if(syncGetGistId()) return syncGetGistId();
@@ -2471,8 +2723,633 @@ function loadCustomTerms(){
   }
 }
 
+/* ============================================================
+   难题库
+   ============================================================ */
+function isInReviewBox(id){ return !!(S.reviewBox && S.reviewBox[id]); }
+function toggleReviewBox(id){
+  if(!S.reviewBox) S.reviewBox={};
+  if(S.reviewBox[id]){
+    delete S.reviewBox[id];
+    toast('已从难题库移除');
+  }else{
+    const isMastered = S.checkMaster && S.checkMaster[id]===1;
+    S.reviewBox[id]={
+      savedDate: todayStr(),
+      reason: isMastered ? '已掌握，待巩固防遗忘' : '未掌握，待复盘',
+      status: 'pending', lastReview: '', notes: ''
+    };
+    toast('已存入难题库');
+  }
+  saveState();
+  // 自动检测上下文并刷新UI
+  const jmodal=document.getElementById('jmodal');
+  if(jmodal && jmodal.classList.contains('show')){
+    const overlay=document.getElementById('jmTermOverlay');
+    if(overlay && overlay.classList.contains('show')){
+      const obtn=overlay.querySelector('.review-bookmark');
+      if(obtn) obtn.classList.toggle('on', isInReviewBox(id));
+    }else{
+      const jbtn=document.querySelector('#jterm'+id+' .review-bookmark');
+      if(jbtn) jbtn.classList.toggle('on', isInReviewBox(id));
+    }
+  }else{
+    renderTerms();
+  }
+  updateReviewBadge();
+}
+function updateReviewBadge(){
+  const pending=Object.values(S.reviewBox||{}).filter(r=>r.status==='pending').length;
+  const badge=document.getElementById('reviewBadge');
+  if(badge){ badge.textContent=pending; badge.style.display=pending>0?'':'none'; }
+}
+let reviewFilter='pending';
+function renderReviewBox(filter){
+  if(filter) reviewFilter=filter;
+  if(!S.reviewBox) S.reviewBox={};
+  const entries=Object.entries(S.reviewBox);
+  const pending=entries.filter(e=>e[1].status==='pending');
+  const consolidated=entries.filter(e=>e[1].status==='consolidated');
+  const stats=document.getElementById('reviewStats');
+  if(stats){
+    stats.innerHTML=`<div class="review-stat"><div class="rs-num">${entries.length}</div><div class="rs-label">难题库总数</div></div>
+      <div class="review-stat"><div class="rs-num" style="color:var(--cinnabar)">${pending.length}</div><div class="rs-label">待复盘</div></div>
+      <div class="review-stat"><div class="rs-num" style="color:var(--green)">${consolidated.length}</div><div class="rs-label">已巩固</div></div>`;
+  }
+  const pe=document.getElementById('rtPending'); if(pe) pe.textContent='('+pending.length+')';
+  const ce=document.getElementById('rtConsolidated'); if(ce) ce.textContent='('+consolidated.length+')';
+  const ae=document.getElementById('rtAll'); if(ae) ae.textContent='('+entries.length+')';
+  document.querySelectorAll('.review-tab').forEach(t=>t.classList.toggle('active', t.dataset.filter===reviewFilter));
+  let list=entries;
+  if(reviewFilter==='pending') list=pending;
+  else if(reviewFilter==='consolidated') list=consolidated;
+  if(reviewFilter==='pending'){ list.sort((a,b)=>(a[1].savedDate||'').localeCompare(b[1].savedDate||'')); }
+  else{ list.sort((a,b)=>(b[1].lastReview||'').localeCompare(a[1].lastReview||'')); }
+  const container=document.getElementById('reviewList');
+  if(!container) return;
+  if(!list.length){
+    container.innerHTML=`<div class="review-empty"><div class="re-icon">★</div><div class="re-text">${
+      reviewFilter==='pending'?'还没有待复盘的难题。学习时点击术语卡片上的「★ 难题库」按钮即可收藏':
+      reviewFilter==='consolidated'?'还没有已巩固的难题':'难题库是空的'}</div></div>`;
+    return;
+  }
+  container.innerHTML=list.map(e=>{
+    const idStr=e[0], r=e[1];
+    const term=TERMS.find(t=>t.id===parseInt(idStr));
+    if(!term) return '';
+    const daysSince=r.savedDate?Math.floor((new Date(todayStr())-new Date(r.savedDate))/86400000):0;
+    return `<div class="review-item ${r.status==='consolidated'?'consolidated':''}">
+      <div class="ri-head">
+        <span class="ri-num">#${term.id}</span>
+        <span class="ri-name" onclick="jumpTerm(${term.id})">${esc(term.n)}</span>
+        <span class="ri-status ${r.status}">${r.status==='pending'?'待复盘':'已巩固'}</span>
+      </div>
+      <div class="ri-meta">
+        <span>存入：${r.savedDate||'—'}</span>
+        ${r.lastReview?`<span>上次复盘：${r.lastReview}</span>`:''}
+        ${daysSince>0&&r.status==='pending'?`<span style="color:var(--cinnabar)">已存 ${daysSince} 天</span>`:''}
+      </div>
+      <div class="ri-reason">${esc(r.reason||'')}</div>
+      ${term.memo?`<div style="font-size:13px;color:var(--cinnabar);margin:6px 0">记忆口诀：${esc(term.memo)}</div>`:''}
+      <div class="ri-actions">
+        ${r.status==='pending'?
+          `<button class="btn btn-success btn-sm" onclick="reviewMarkReviewed(${term.id})">已复盘</button>
+           <button class="btn btn-outline btn-sm" onclick="reviewMarkConsolidated(${term.id})">已巩固，移出</button>`
+        :
+          `<button class="btn btn-outline btn-sm" onclick="reviewReopen(${term.id})">重新复盘</button>
+           <button class="btn btn-outline btn-sm" onclick="reviewRemove(${term.id})">删除</button>`
+        }
+        <button class="btn btn-ghost btn-sm" onclick="reviewEditReason(${term.id})">编辑理由</button>
+      </div>
+    </div>`;
+  }).join('');
+  updateReviewBadge();
+}
+function reviewMarkReviewed(id){
+  if(!S.reviewBox[id])return;
+  S.reviewBox[id].lastReview=todayStr(); saveState(); toast('已记录复盘'); renderReviewBox();
+}
+function reviewMarkConsolidated(id){
+  if(!S.reviewBox[id])return;
+  S.reviewBox[id].status='consolidated'; S.reviewBox[id].lastReview=todayStr(); saveState(); toast('已标记巩固'); renderReviewBox();
+}
+function reviewReopen(id){
+  if(!S.reviewBox[id])return;
+  S.reviewBox[id].status='pending'; saveState(); toast('已重新标记为待复盘'); renderReviewBox();
+}
+function reviewRemove(id){
+  if(!S.reviewBox[id])return;
+  if(confirm('确定从难题库中删除这个条目吗？')){ delete S.reviewBox[id]; saveState(); toast('已删除'); renderReviewBox(); }
+}
+function reviewEditReason(id){
+  if(!S.reviewBox[id])return;
+  const current=S.reviewBox[id].reason||'';
+  const reason=prompt('为什么存入难题库？（修改理由）',current);
+  if(reason!==null){ S.reviewBox[id].reason=reason; saveState(); toast('理由已更新'); renderReviewBox(); }
+}
+
+/* ============================================================
+   专题资讯
+   ============================================================ */
+const INSIGHT_PLATFORMS=[
+  {name:'Hacker News',ico:'HN',color:'#FF6600',url:'https://hn.algolia.com/?q=',desc:'全球技术热点'},
+  {name:'GitHub',ico:'GH',color:'#333',url:'https://github.com/search?type=repositories&q=',desc:'开源项目搜索'},
+  {name:'Reddit',ico:'R',color:'#FF4500',url:'https://www.reddit.com/search/?q=',desc:'AI社区讨论'},
+  {name:'arXiv',ico:'aX',color:'#B31B1B',url:'https://arxiv.org/search/?query=',desc:'最新论文'},
+  {name:'36Kr',ico:'36',color:'#1C1A17',url:'https://www.36kr.com/search/articles/',desc:'科技商业资讯'},
+  {name:'V2EX',ico:'V2',color:'#333',url:'https://www.google.com/search?q=site:v2ex.com+',desc:'技术社区'},
+  {name:'知乎',ico:'知',color:'#0084FF',url:'https://www.zhihu.com/search?type=content&q=',desc:'中文讨论'},
+  {name:'CSDN',ico:'C',color:'#FC5531',url:'https://so.csdn.net/so/search?q=',desc:'技术博客'},
+  {name:'掘金',ico:'J',color:'#1E80FF',url:'https://juejin.cn/search?query=',desc:'开发者社区'},
+  {name:'Google',ico:'G',color:'#4285F4',url:'https://www.google.com/search?q=',desc:'全网搜索'}
+];
+let currentInsightDay=0, currentInsightTopic='';
+function renderInsights(){
+  const day=currentIndex();
+  currentInsightDay=day;
+  const d=DAILY[day];
+  if(!d) return;
+  const terms=(d.terms||[]).map(id=>TERMS.find(x=>x.id===id)).filter(Boolean);
+  const kps=KNOWLEDGE[day]||[];
+  const topics=terms.map(t=>({name:t.n})).concat(kps.map(kp=>({name:kp.t})));
+  const heroTopics=document.getElementById('insightTopics');
+  if(heroTopics){
+    heroTopics.innerHTML=topics.map((t,i)=>`<span class="insight-topic ${i===0?'active':''}" onclick="selectInsightTopic(this)">${esc(t.name)}</span>`).join('');
+  }
+  currentInsightTopic=topics.length?topics[0].name:'';
+  renderInsightContent();
+  renderReadingList();
+}
+function selectInsightTopic(el){
+  currentInsightTopic=el.textContent;
+  document.querySelectorAll('.insight-topic').forEach(t=>t.classList.toggle('active', t===el));
+  renderInsightContent();
+}
+function renderInsightContent(){
+  const container=document.getElementById('insightContent');
+  if(!container) return;
+  if(!currentInsightTopic){
+    container.innerHTML='<div class="review-empty"><div class="re-text">今天没有学习内容，请先完成今日学习</div></div>';
+    return;
+  }
+  const topic=currentInsightTopic;
+  const platformsHTML=INSIGHT_PLATFORMS.map(p=>{
+    const url=p.url+encodeURIComponent(topic);
+    return `<a class="insight-plat" href="${url}" target="_blank" rel="noopener">
+      <span class="ip-ico" style="background:${p.color}">${p.ico}</span>
+      <div class="ip-info"><div class="ip-name">${p.name}</div><div class="ip-desc">${p.desc}</div></div>
+    </a>`;
+  }).join('');
+  const cfg=S.settings;
+  const hasAI=cfg.aiMode==='auto'&&cfg.apiUrl&&cfg.apiKey&&cfg.model;
+  container.innerHTML=`
+    <div class="insight-section">
+      <div class="is-title">全网搜索「${esc(topic)}」</div>
+      <div class="insight-platforms">${platformsHTML}</div>
+    </div>
+    ${hasAI?`
+      <div class="insight-ai-box">
+        <h3>AI 行业洞察</h3>
+        <div id="insightAIContent">
+          <button class="btn btn-primary" onclick="generateInsightAI()">生成「${esc(topic)}」行业洞察</button>
+        </div>
+      </div>
+    `:`
+      <div class="card" style="border:1px dashed var(--line)">
+        <div style="font-size:13px;color:var(--ink3);text-align:center;padding:8px">配置AI API后可生成行业洞察摘要（设置页 → AI能力配置）</div>
+      </div>
+    `}
+    <div class="insight-section">
+      <div class="is-title">收藏文章</div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px">
+        <input id="readingUrl" placeholder="文章链接 URL" style="flex:1;min-width:220px;padding:9px 14px;border:1px solid var(--line);background:#fff">
+        <input id="readingTitle" placeholder="标题（可选）" style="min-width:180px;padding:9px 14px;border:1px solid var(--line);background:#fff">
+        <button class="btn btn-primary" onclick="addReadingItem()">加入清单</button>
+      </div>
+    </div>`;
+}
+async function generateInsightAI(){
+  const topic=currentInsightTopic;
+  const container=document.getElementById('insightAIContent');
+  if(!container) return;
+  container.innerHTML='<div class="insight-ai-loading">AI正在分析「'+esc(topic)+'」的最新行业动态…</div>';
+  const cfg=S.settings;
+  const url=cfg.apiUrl.replace(/\/+$/,'');
+  const day=currentInsightDay;
+  const d=DAILY[day];
+  // 精简上下文：只传术语名和大白话，不传完整原理（避免prompt过大导致400）
+  let briefContext='';
+  if(d){
+    const termIds=d.terms||[];
+    const terms=termIds.map(id=>TERMS.find(x=>x.id===id)).filter(Boolean);
+    if(terms.length){
+      briefContext='今天学过的术语：'+terms.map(t=>t.n+'（'+(t.plain||'')+'）').join('；');
+    }
+    const dayKp=KNOWLEDGE[day]||[];
+    if(dayKp.length){
+      briefContext+=(briefContext?'\n':'')+'方法论知识点：'+dayKp.map(kp=>kp.t).join('、');
+    }
+  }
+  const sysPrompt=`你是"千手学习Agent"的行业资讯助手。学习者正在学习"智惠工程师L3认证"课程。
+当前学习主题：「${topic}」${d?'（第'+day+'天：'+d.t+'）':''}
+${briefContext}
+
+请围绕「${topic}」生成一份简洁的行业洞察摘要：
+1. 这个领域2025-2026年的最新发展趋势（2-3个要点）
+2. 值得关注的重大事件或里程碑（1-2个）
+3. 推荐深入阅读的3个方向（每个方向给出搜索关键词）
+
+要求：简洁、准确、有信息量，不超过300字。用中文。`;
+  try{
+    const res=await fetch(url+'/chat/completions',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+cfg.apiKey},
+      body:JSON.stringify({model:cfg.model,messages:[{role:'system',content:sysPrompt}],temperature:0.5,max_tokens:800})
+    });
+    if(!res.ok){
+      let errDetail='';
+      try{ const e=await res.text(); errDetail=' '+e.slice(0,120); }catch(e2){}
+      throw new Error('HTTP '+res.status+errDetail);
+    }
+    const data=await res.json();
+    const content=data.choices[0].message.content;
+    container.innerHTML='<div class="insight-ai-content">'+esc(content)+'</div>';
+  }catch(err){
+    container.innerHTML='<div style="color:var(--cinnabar);font-size:13px">生成失败：'+esc(err.message)+'</div><button class="btn btn-outline btn-sm" style="margin-top:8px" onclick="generateInsightAI()">重试</button>';
+  }
+}
+function addReadingItem(){
+  const urlEl=document.getElementById('readingUrl');
+  const titleEl=document.getElementById('readingTitle');
+  if(!urlEl||!urlEl.value.trim()){toast('请输入文章链接');return;}
+  if(!S.readingList)S.readingList=[];
+  S.readingList.push({url:urlEl.value.trim(),title:titleEl.value.trim()||urlEl.value.trim(),topic:currentInsightTopic||'',savedDate:todayStr()});
+  urlEl.value=''; titleEl.value='';
+  saveState(); toast('已加入阅读清单'); renderReadingList();
+}
+function renderReadingList(){
+  const container=document.getElementById('readingList');
+  if(!container) return;
+  const list=S.readingList||[];
+  if(!list.length){
+    container.innerHTML='<div style="color:var(--ink3);text-align:center;padding:20px;font-size:13px">还没有收藏的文章</div>';
+    return;
+  }
+  container.innerHTML=list.slice().reverse().map((item,idx)=>{
+    const realIdx=list.length-1-idx;
+    return `<div class="reading-item">
+      <span class="ri-del" onclick="removeReadingItem(${realIdx})">✕</span>
+      <div class="ri-content">
+        <a class="ri-title" href="${esc(item.url)}" target="_blank" rel="noopener" title="${esc(item.url)}">${esc(item.title)}</a>
+        <div class="ri-meta">${item.topic?'关键词：'+esc(item.topic)+' · ':''}收藏于 ${item.savedDate}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+function removeReadingItem(idx){
+  if(!S.readingList)return;
+  S.readingList.splice(idx,1); saveState(); toast('已删除'); renderReadingList();
+}
+
+/* ============================================================
+   语音功能：ASR（语音输入）+ TTS（语音输出）
+   ============================================================ */
+/* ---- 语音测试 ---- */
+function testTTS(){
+  const mode=S.settings.ttsMode||'minimax';
+  const voice=S.settings.ttsVoiceId||'female-shaonv';
+  if(mode==='off'){ toast('语音输出已关闭'); return; }
+  if(mode==='minimax'){
+    toast('正在用 MiniMax TTS（'+voice+'）测试…');
+  }else{
+    toast('正在用浏览器朗读测试…');
+  }
+  speakText('语音测试：千手学习Agent语音功能已就绪。当前使用'+(mode==='minimax'?'MiniMax真人音色':'浏览器朗读')+'，音色：'+voice);
+}
+
+/* ---- ASR：语音输入（浏览器内置） ---- */
+let voiceRec=null, isRecording=false;
+function toggleVoiceInput(){
+  if(isRecording){ if(voiceRec) voiceRec.stop(); return; }
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR){ toast('浏览器不支持语音识别，请用Chrome或Edge'); return; }
+  voiceRec=new SR();
+  voiceRec.lang='zh-CN';
+  voiceRec.continuous=false;
+  voiceRec.interimResults=true;
+  const input=document.getElementById('chatInput');
+  let finalText=input.value?'  ':'';
+  voiceRec.onresult=function(ev){
+    let interim='';
+    for(let i=ev.resultIndex;i<ev.results.length;i++){
+      if(ev.results[i].isFinal) finalText+=ev.results[i][0].transcript;
+      else interim+=ev.results[i][0].transcript;
+    }
+    input.value=finalText+interim;
+  };
+  voiceRec.onend=function(){
+    isRecording=false;
+    var btn=document.getElementById('micBtn');
+    if(btn){ btn.classList.remove('recording'); btn.textContent='语音'; }
+    if(finalText.trim()){ input.value=finalText.trim(); input.focus(); }
+  };
+  voiceRec.onerror=function(ev){
+    isRecording=false;
+    var btn=document.getElementById('micBtn');
+    if(btn){ btn.classList.remove('recording'); btn.textContent='语音'; }
+    toast('语音识别：'+(ev.error||'失败'));
+  };
+  try{
+    voiceRec.start();
+    isRecording=true;
+    var btn=document.getElementById('micBtn');
+    if(btn){ btn.classList.add('recording'); btn.textContent='停止'; }
+  }catch(e){
+    toast('启动语音识别失败');
+  }
+}
+
+/* ---- TTS：语音输出 ---- */
+let currentTTS=null, currentTTSBtn=null;
+function speakMsg(btn,text){
+  if(currentTTS&&currentTTSBtn===btn){ stopSpeak(); return; }
+  if(currentTTS) stopSpeak();
+  speakText(text,btn);
+}
+function speakTerm(id){
+  var t=TERMS.find(function(x){return x.id===id;});
+  if(!t) return;
+  var parts=[t.n];
+  if(t.plain) parts.push(t.plain);
+  if(t.why) parts.push(t.why);
+  if(t.memo) parts.push('记忆口诀：'+t.memo);
+  speakText(parts.join('。 '));
+}
+function speakKp(idx){
+  var kps=KNOWLEDGE[jDay]||[];
+  if(!kps[idx]) return;
+  speakText(kps[idx].t+'。'+kps[idx].c);
+}
+function speakText(text,btn){
+  if(!text||!text.trim()) return;
+  var mode=S.settings.ttsMode||'minimax';
+  if(mode==='off'){ toast('语音输出已关闭，请在设置中开启'); return; }
+  if(btn){ currentTTSBtn=btn; btn.classList.add('playing'); btn.textContent='\u25A0 停止'; }
+  if(mode==='minimax'){ speakMiniMax(text,btn); }
+  else{ speakBrowser(text,btn); }
+}
+function speakBrowser(text,btn){
+  if(!window.speechSynthesis){
+    toast('浏览器不支持语音合成');
+    if(btn) resetTTSBtn(btn);
+    return;
+  }
+  speechSynthesis.cancel();
+  var utter=new SpeechSynthesisUtterance(text);
+  utter.lang='zh-CN';
+  utter.rate=1.0;
+  var voices=speechSynthesis.getVoices();
+  var cnVoices=voices.filter(function(v){return v.lang&&v.lang.indexOf('zh')===0;});
+  var preferred=cnVoices.find(function(v){return /xiao|xiaoxiao|yaoyao|yunjian|yunxi|kangkang|huihui|Microsoft/i.test(v.name);})
+    || cnVoices.find(function(v){return /natural|neural|premium|online/i.test(v.name);})
+    || cnVoices[0];
+  if(preferred) utter.voice=preferred;
+  utter.onend=function(){ if(btn) resetTTSBtn(btn); currentTTS=null; currentTTSBtn=null; };
+  utter.onerror=function(){ if(btn) resetTTSBtn(btn); currentTTS=null; currentTTSBtn=null; };
+  currentTTS=utter;
+  currentTTSBtn=btn;
+  speechSynthesis.speak(utter);
+}
+
+/* 构建TTS请求（兼容 MiniMax 官方 / 阿里云百炼 / OpenAI兼容代理） */
+function buildTtsRequests(voiceId, text){
+  var cfg=S.settings;
+  var baseUrl=(cfg.apiUrl||'').replace(/\/+$/,'');
+  var ttsUrl=(cfg.ttsApiUrl||'').replace(/\/+$/,'')||baseUrl;
+  if(!ttsUrl) return [];
+  var reqs=[];
+  var voice=voiceId||'female-shaonv';
+  var vs={voice_id:voice,speed:1.0,vol:1.0,pitch:0};
+  var as={sample_rate:32000,bitrate:128000,format:'mp3',channel:1};
+  var model=cfg.ttsModel||'speech-02-hd';
+  if(/dashscope/i.test(ttsUrl)){
+    var dsUrl='https://dashscope.aliyuncs.com/api/v1/services/aigc/multimodal-generation/generation';
+    var m1=model.indexOf('MiniMax/')===0?model:'MiniMax/'+model;
+    var m2=m1==='MiniMax/speech-02-hd'?'MiniMax/speech-2.8-hd':'MiniMax/speech-02-hd';
+    reqs.push({label:'百炼/'+m1,url:dsUrl,body:{model:m1,input:{text:text,voice_setting:vs,audio_setting:as}}});
+    reqs.push({label:'百炼/'+m2,url:dsUrl,body:{model:m2,input:{text:text,voice_setting:vs,audio_setting:as}}});
+  }else{
+    var eps=[ttsUrl+'/t2a_v2'];
+    if(/\/v1$/.test(ttsUrl)) eps=[ttsUrl+'/t2a_v2', ttsUrl.replace(/\/v1$/,'')+'/v1/t2a_v2'];
+    eps=eps.filter(function(v,i){return eps.indexOf(v)===i;});
+    var models=[model];
+    if(model!=='speech-02-hd') models.push('speech-02-hd');
+    if(model!=='speech-2.8-hd') models.push('speech-2.8-hd');
+    if(model!=='speech-2.5-hd-preview') models.push('speech-2.5-hd-preview');
+    models=models.filter(function(m,i){return models.indexOf(m)===i;});
+    eps.forEach(function(ep){
+      models.forEach(function(m){
+        reqs.push({label:ep+' / '+m,url:ep,body:{model:m,text:text,stream:false,voice_setting:vs,audio_setting:as}});
+      });
+    });
+  }
+  return reqs;
+}
+/* 解析TTS响应：兼容 MiniMax官方(data.audio) 与 百炼(output.data.audio) */
+function parseTTSResult(data){
+  if(!data) return {error:'空响应',audio:null};
+  var errMsg=null;
+  if(data.base_resp&&data.base_resp.status_code!==0) errMsg=data.base_resp.status_msg;
+  if(!errMsg&&data.output&&data.output.base_resp&&data.output.base_resp.status_code!==0) errMsg=data.output.base_resp.status_msg;
+  if(errMsg) return {error:errMsg,audio:null};
+  var audio=null;
+  if(data.data&&data.data.audio) audio=data.data.audio;
+  else if(data.output&&data.output.data&&data.output.data.audio) audio=data.output.data.audio;
+  if(!audio) return {error:'未返回音频数据',audio:null};
+  return {error:null,audio:audio};
+}
+async function speakMiniMax(text,btn){
+  var cfg=S.settings;
+  var reqs=buildTtsRequests(cfg.ttsVoiceId||'female-shaonv', text.slice(0,2000));
+  if(!reqs.length){
+    toast('请先在设置中配置API地址和Key');
+    if(btn) resetTTSBtn(btn);
+    return;
+  }
+  var lastErr=null, voiceErr=false;
+  for(var ri=0; ri<reqs.length; ri++){
+    try{
+      var r=reqs[ri];
+      var res=await fetch(r.url,{
+        method:'POST',
+        headers:{'Content-Type':'application/json','Authorization':'Bearer '+cfg.apiKey},
+        body:JSON.stringify(r.body)
+      });
+      if(!res.ok){
+        var e2=await res.text().catch(function(){return '';});
+        lastErr=new Error('HTTP '+res.status+' '+e2.slice(0,100));
+        continue;
+      }
+      var data=await res.json();
+      var parsed=parseTTSResult(data);
+      if(parsed.error){
+        if(/voice|音色/i.test(parsed.error)) voiceErr=true;
+        lastErr=new Error(parsed.error);
+        continue;
+      }
+      var hex=parsed.audio;
+      var bytes=new Uint8Array(hex.length/2);
+      for(var i=0;i<bytes.length;i++) bytes[i]=parseInt(hex.substr(i*2,2),16);
+      var blob=new Blob([bytes],{type:'audio/mp3'});
+      var audioUrl=URL.createObjectURL(blob);
+      var audio=new Audio(audioUrl);
+      currentTTS=audio; currentTTSBtn=btn;
+      audio.onended=function(){ URL.revokeObjectURL(audioUrl); if(btn) resetTTSBtn(btn); currentTTS=null; currentTTSBtn=null; };
+      audio.onerror=function(){ URL.revokeObjectURL(audioUrl); if(btn) resetTTSBtn(btn); currentTTS=null; currentTTSBtn=null; };
+      audio.play().catch(function(){ });
+      return;
+    }catch(err){
+      lastErr=err;
+      if(err instanceof TypeError){
+        lastErr=new Error('网络/跨域错误，请确认端点可访问：'+reqs[ri].url);
+        break;
+      }
+    }
+  }
+  var errMsg=lastErr?lastErr.message:'未知错误';
+  if(voiceErr||/voice.*not exist|not found|无效音色|音色.*不存在|voice not exist/i.test(errMsg)){
+    toast('音色ID在当前环境不可用 → 去设置页点「扫描可用音色」自动识别');
+  }else{
+    toast('MiniMax TTS调用失败：'+errMsg+'（已切换浏览器朗读）');
+  }
+  speakBrowser(text,btn);
+}
+
+/* ---- 扫描可用音色（兼容多种模型/接入方式） ---- */
+const TTS_CANDIDATE_VOICES=[
+  'female-shaonv','female-tianmei','female-yujian','female-yujie','female-qingnian',
+  'male-qn-qingse','male-qn-jingying','male-chengshu','male-shenchen','male-qingnian',
+  'audiobook_male_1','audiobook_female_1','audiobook_male_2','audiobook_female_2',
+  'presenter_male','presenter_female','narrator_male','narrator_female'
+];
+async function testSingleVoice(voiceId){
+  var cfg=S.settings;
+  var baseUrl=(cfg.apiUrl||'').replace(/\/+$/,'');
+  var ttsUrl=(cfg.ttsApiUrl||'').replace(/\/+$/,'')||baseUrl;
+  if(!ttsUrl||!cfg.apiKey) return false;
+  var savedModel=cfg.ttsModel||'speech-02-hd';
+  var modelList=[savedModel];
+  if(savedModel!=='speech-02-hd') modelList.push('speech-02-hd');
+  if(savedModel!=='speech-2.8-hd') modelList.push('speech-2.8-hd');
+  var reqs=[];
+  var vs={voice_id:voiceId,speed:1.0,vol:1.0,pitch:0};
+  var as={sample_rate:32000,bitrate:128000,format:'mp3',channel:1};
+  if(/dashscope/i.test(ttsUrl)){
+    var dsUrl='https://dashscope.aliyuncs.com/api/v1/services/aigc/multimodal-generation/generation';
+    modelList.forEach(function(m){
+      var mm=m.indexOf('MiniMax/')===0?m:'MiniMax/'+m;
+      reqs.push({url:dsUrl,body:{model:mm,input:{text:'语音测试',voice_setting:vs,audio_setting:as}}});
+    });
+  }else{
+    var eps=[ttsUrl+'/t2a_v2'];
+    if(/\/v1$/.test(ttsUrl)) eps=[ttsUrl+'/t2a_v2', ttsUrl.replace(/\/v1$/,'')+'/v1/t2a_v2'];
+    eps=eps.filter(function(v,i){return eps.indexOf(v)===i;});
+    eps.forEach(function(ep){
+      modelList.forEach(function(m){
+        reqs.push({url:ep,body:{model:m,text:'语音测试',stream:false,voice_setting:vs,audio_setting:as}});
+      });
+    });
+  }
+  for(var i=0;i<reqs.length;i++){
+    try{
+      var ctrl=new AbortController();
+      var timer=setTimeout(function(){ctrl.abort();},4000);
+      var res=await fetch(reqs[i].url,{
+        method:'POST',signal:ctrl.signal,
+        headers:{'Content-Type':'application/json','Authorization':'Bearer '+cfg.apiKey},
+        body:JSON.stringify(reqs[i].body)
+      });
+      clearTimeout(timer);
+      if(!res.ok) continue;
+      var data=await res.json();
+      var parsed=parseTTSResult(data);
+      if(!parsed.error&&parsed.audio) return true;
+    }catch(e){ /* 跳过 */ }
+  }
+  return false;
+}
+async function scanVoices(){
+  const btn=document.getElementById('scanVoiceBtn');
+  const resEl=document.getElementById('scanVoiceResult');
+  if(btn) btn.disabled=true;
+  if(resEl) resEl.textContent='正在逐一测试可用音色…（约10-20秒）';
+  const cfg=S.settings;
+  if(!(cfg.apiUrl||'').trim()||!cfg.apiKey){
+    if(resEl) resEl.textContent='请先配置API地址和Key';
+    if(btn) btn.disabled=false;
+    return;
+  }
+  var found=[];
+  for(var i=0;i<TTS_CANDIDATE_VOICES.length;i++){
+    var v=TTS_CANDIDATE_VOICES[i];
+    var ok=await testSingleVoice(v);
+    if(ok) found.push(v);
+    if(resEl) resEl.textContent='测试中 '+(i+1)+'/'+TTS_CANDIDATE_VOICES.length+'…';
+  }
+  var sel=document.getElementById('setTtsVoiceId');
+  var custom=document.getElementById('setTtsVoiceCustom');
+  if(found.length){
+    Array.prototype.forEach.call(sel.options,function(opt){
+      if(opt.value!=='custom') opt.remove();
+    });
+    var voiceNames={
+      'female-shaonv':'少女声','female-tianmei':'甜美女声','female-yujian':'御姐音','female-yujie':'御姐音','female-qingnian':'青年女声',
+      'male-qn-qingse':'青年男声','male-qn-jingying':'精英男声','male-chengshu':'成熟男声','male-shenchen':'沉稳男声','male-qingnian':'青年男声',
+      'audiobook_male_1':'有声书男声1','audiobook_female_1':'有声书女声1','audiobook_male_2':'有声书男声2','audiobook_female_2':'有声书女声2',
+      'presenter_male':'男主播','presenter_female':'女主播','narrator_male':'男解说','narrator_female':'女解说'
+    };
+    found.forEach(function(v){
+      var opt=document.createElement('option');
+      opt.value=v;
+      opt.textContent=(voiceNames[v]||v)+(voiceNames[v]?'（'+v+'）':'');
+      sel.insertBefore(opt, sel.querySelector('option[value="custom"]'));
+    });
+    sel.value=found[0];
+    if(custom){ custom.value=found[0]; custom.style.display='none'; }
+    S.settings.ttsVoiceId=found[0];
+    saveState();
+    if(resEl){
+      resEl.innerHTML='找到 '+found.length+' 个可用音色，已自动选中「'+found[0]+'」 <button class="btn btn-outline btn-sm" onclick="scanPreview()">试听</button>';
+    }
+  }else{
+    if(resEl) resEl.textContent='未找到可用音色。请确认：① TTS模型名（如 speech-02-hd）正确；② 登录 MiniMax 控制台 → 语音合成 → 音色管理 查看可用音色ID填入「自定义」';
+  }
+  if(btn) btn.disabled=false;
+}
+function scanPreview(){
+  const v=(S.settings.ttsVoiceId||'');
+  if(!v){toast('请先选择音色');return;}
+  speakText('音色测试，这是当前选用的声音。');
+}
+function stopSpeak(){
+  if(currentTTS){
+    if(window.speechSynthesis&&currentTTS instanceof SpeechSynthesisUtterance){
+      speechSynthesis.cancel();
+    }else if(currentTTS.pause){
+      currentTTS.pause();
+    }
+  }
+  if(currentTTSBtn) resetTTSBtn(currentTTSBtn);
+  currentTTS=null; currentTTSBtn=null;
+}
+function resetTTSBtn(btn){
+  if(!btn) return;
+  btn.classList.remove('playing');
+  btn.textContent='\u25B6 \u6717\u8BFB';
+}
+
 /* 初始化 */
-document.addEventListener('DOMContentLoaded',()=>{loadCustomTerms();renderAll();autoSyncInit();});
+document.addEventListener('DOMContentLoaded',()=>{loadCustomTerms();renderAll();updateReviewBadge();autoSyncInit();});
 /* 自动同步：若配置了自动模式且有Token，静默合并云端数据 */
 function autoSyncInit(){
   const s=S.settings||{};
