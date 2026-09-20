@@ -477,6 +477,48 @@ mark{background:transparent;border-bottom:2px solid var(--cinnabar);color:inheri
 .tts-term:hover{color:var(--cinnabar);border-color:var(--cinnabar)}
 .tts-term.playing{color:var(--cinnabar);border-color:var(--cinnabar);background:var(--cinnabar-soft)}
 .voice-hint{font-size:12px;color:var(--ink3);line-height:1.7;padding:8px 12px;background:var(--paper);border:1px dashed var(--line);margin-top:10px}
+
+/* ===== 顶栏设置按钮（手机端可见）===== */
+.topbar-settings{cursor:pointer;font-size:13px;color:var(--ink2);border:1px solid var(--line);background:var(--card);padding:6px 14px;letter-spacing:.06em;transition:.15s}
+.topbar-settings:hover{border-color:var(--cinnabar);color:var(--cinnabar)}
+
+/* ===== 浮动AI助手 ===== */
+.ai-fab{position:fixed;right:24px;bottom:24px;width:52px;height:52px;border-radius:50%;background:var(--ink);color:var(--paper);font-size:20px;font-weight:800;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 4px 16px rgba(28,26,23,.25);z-index:9000;transition:.2s;border:2px solid var(--cinnabar);letter-spacing:0}
+.ai-fab:hover{transform:scale(1.08);box-shadow:0 6px 24px rgba(166,58,43,.3)}
+.ai-fab.has-new::after{content:'';position:absolute;top:-2px;right:-2px;width:10px;height:10px;border-radius:50%;background:var(--cinnabar);border:2px solid var(--paper)}
+.ai-panel{position:fixed;top:0;right:-420px;width:400px;max-width:100vw;height:100vh;background:var(--paper);box-shadow:-4px 0 24px rgba(28,26,23,.12);z-index:9001;transition:right .25s ease;display:flex;flex-direction:column;border-left:1px solid var(--line)}
+.ai-panel.open{right:0}
+.ai-panel-mask{position:fixed;inset:0;background:rgba(28,26,23,.3);z-index:9000;opacity:0;pointer-events:none;transition:.25s}
+.ai-panel-mask.show{opacity:1;pointer-events:auto}
+.ai-panel-head{display:flex;align-items:center;gap:10px;padding:14px 18px;background:var(--ink);color:var(--paper);flex-shrink:0}
+.ai-panel-head .ai-ph-title{font-size:15px;font-weight:800;letter-spacing:.04em;flex:1}
+.ai-panel-head .ai-ph-close{cursor:pointer;font-size:18px;color:var(--paper);opacity:.7;transition:.15s;background:none;border:none}
+.ai-panel-head .ai-ph-close:hover{opacity:1}
+.ai-panel-body{flex:1;overflow-y:auto;padding:16px}
+.ai-panel-input{display:flex;gap:8px;padding:12px 14px;border-top:1px solid var(--line);background:var(--card);flex-shrink:0}
+.ai-panel-input textarea{flex:1;border:1px solid var(--line);padding:9px 12px;resize:none;height:42px;line-height:1.4;background:#fff;font-size:13px}
+.ai-panel-input button{width:42px;background:var(--ink);color:var(--paper);font-size:14px;cursor:pointer;border:none;flex-shrink:0}
+.ai-panel-input button:disabled{opacity:.5;cursor:not-allowed}
+.ai-msg{margin-bottom:12px;line-height:1.6;font-size:13px}
+.ai-msg.user{text-align:right}
+.ai-msg.user .ai-msg-bubble{display:inline-block;background:var(--ink);color:var(--paper);padding:8px 14px;max-width:85%;text-align:left;white-space:pre-wrap}
+.ai-msg.bot .ai-msg-bubble{display:inline-block;background:var(--card);border:1px solid var(--line);padding:10px 14px;max-width:90%;white-space:pre-wrap}
+.ai-msg.bot .ai-msg-bubble .tts-btn{margin-top:6px}
+.ai-msg.context .ai-msg-bubble{background:var(--paper);border:1px dashed var(--gold);font-size:12px;color:var(--ink2)}
+.ai-empty{text-align:center;padding:30px 20px;color:var(--ink3);font-size:13px;line-height:1.8}
+.ai-empty .ae-icon{font-size:28px;color:var(--line);margin-bottom:10px}
+
+/* ===== 划选文字弹出 ===== */
+.sel-popup{position:fixed;z-index:9100;background:var(--ink);color:var(--paper);padding:7px 16px;font-size:13px;cursor:pointer;letter-spacing:.04em;box-shadow:0 4px 12px rgba(28,26,23,.25);transition:.15s;border:none}
+.sel-popup:hover{background:var(--cinnabar)}
+.sel-popup::before{content:'';position:absolute;bottom:-5px;left:50%;transform:translateX(-50%);border:5px solid transparent;border-top-color:var(--ink)}
+.sel-popup:hover::before{border-top-color:var(--cinnabar)}
+
+@media(max-width:900px){
+  .ai-panel{width:100vw;right:-100vw}
+  .ai-fab{right:16px;bottom:16px;width:48px;height:48px}
+  .topbar-settings{display:inline-flex;align-items:center;gap:4px}
+}
 </style>
 </head>
 <body>
@@ -517,6 +559,7 @@ mark{background:transparent;border-bottom:2px solid var(--cinnabar);color:inheri
       <span class="tick">✦</span>
       <span><span class="num" id="streakNum">0</span> 天连续</span>
     </div>
+    <button class="topbar-settings" onclick="window.nav('settings')" title="设置">⚙ 设置</button>
   </div>
 
   <!-- ===== TODAY ===== -->
@@ -837,6 +880,28 @@ mark{background:transparent;border-bottom:2px solid var(--cinnabar);color:inheri
 
   <!-- Toast -->
   <div class="toast" id="toast"></div>
+
+  <!-- 浮动AI助手 -->
+  <div class="ai-fab" id="aiFab" onclick="toggleAIPanel()" title="AI助手">问</div>
+  <div class="ai-panel-mask" id="aiPanelMask" onclick="closeAIPanel()"></div>
+  <aside class="ai-panel" id="aiPanel">
+    <div class="ai-panel-head">
+      <span class="ai-ph-title">AI 学习助手</span>
+      <button class="ai-ph-close" onclick="closeAIPanel()">✕</button>
+    </div>
+    <div class="ai-panel-body" id="aiPanelBody">
+      <div class="ai-empty" id="aiEmpty">
+        <div class="ae-icon">问</div>
+        选中页面任意文字，点击「AI解释」可快速释义<br>
+        也可直接在此提问，深入理解知识
+      </div>
+    </div>
+    <div class="ai-panel-input">
+      <textarea id="aiPanelInput" placeholder="输入问题…" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendAIPanelMsg()}""></textarea>
+      <button id="aiPanelSend" onclick="sendAIPanelMsg()">→</button>
+    </div>
+  </aside>
+  <button class="sel-popup" id="selPopup" style="display:none" onclick="explainSelection()">AI 解释</button>
 
   <!-- Learning Journey 今日学习流弹窗 -->
   <div class="jmodal-mask" id="jmodal">
@@ -2419,6 +2484,13 @@ function syncMergeData(a,b){
   const out=JSON.parse(JSON.stringify(a||{}));
   const bj=b||{};
   if(!out.settings) out.settings={};
+  // 合并settings：非空字段优先（远端有值则取远端，否则保留本地）
+  var sA=out.settings,sB=bj.settings||{};
+  ['apiUrl','apiKey','model','aiMode','ttsMode','ttsModel','ttsVoiceId','ttsApiUrl','ttsAutoPlay','ttsSpeed'].forEach(function(k){
+    if(!out.settings[k]&&sB[k]) out.settings[k]=sB[k];
+  });
+  if(sB.syncToken&&!out.settings.syncToken) out.settings.syncToken=sB.syncToken;
+  if(sB.syncGistId&&!out.settings.syncGistId) out.settings.syncGistId=sB.syncGistId;
   // 学习进度 current
   const curA=a&&a.current?JSON.parse(JSON.stringify(a.current)):{};
   const curB=bj.current||{};
@@ -3377,6 +3449,122 @@ function resetTTSBtn(btn){
   if(!btn) return;
   btn.classList.remove('playing');
   btn.textContent='\u25B6 \u6717\u8BFB';
+}
+
+/* ============================================================
+   浮动AI助手
+   ============================================================ */
+let aiPanelMsgs=[];
+function toggleAIPanel(){
+  var p=document.getElementById('aiPanel');
+  var m=document.getElementById('aiPanelMask');
+  if(p.classList.contains('open')){ closeAIPanel(); }
+  else{ p.classList.add('open'); m.classList.add('show'); document.getElementById('aiPanelInput').focus(); }
+}
+function closeAIPanel(){
+  document.getElementById('aiPanel').classList.remove('open');
+  document.getElementById('aiPanelMask').classList.remove('show');
+}
+function addAIPanelMsg(who,text){
+  var body=document.getElementById('aiPanelBody');
+  var empty=document.getElementById('aiEmpty');
+  if(empty) empty.style.display='none';
+  var div=document.createElement('div');
+  div.className='ai-msg '+who;
+  var bubble=document.createElement('div');
+  bubble.className='ai-msg-bubble';
+  bubble.textContent=text;
+  div.appendChild(bubble);
+  if(who==='bot'){
+    var btn=document.createElement('button');
+    btn.className='tts-btn';
+    btn.textContent='\u25B6 朗读';
+    (function(t,b){b.onclick=function(){speakMsg(b,t);};})(text,btn);
+    div.appendChild(btn);
+  }
+  body.appendChild(div);
+  body.scrollTop=body.scrollHeight;
+}
+function sendAIPanelMsg(){
+  var inp=document.getElementById('aiPanelInput');
+  var txt=inp.value.trim();
+  if(!txt) return;
+  inp.value='';
+  addAIPanelMsg('user',txt);
+  aiPanelMsgs.push({role:'user',content:txt});
+  var btn=document.getElementById('aiPanelSend');
+  btn.disabled=true;
+  callAIAssistant(txt).then(function(reply){
+    addAIPanelMsg('bot',reply);
+    aiPanelMsgs.push({role:'assistant',content:reply});
+    if(S.settings&&S.settings.ttsAutoPlay){ setTimeout(function(){speakText(reply);},300); }
+  }).catch(function(err){
+    addAIPanelMsg('bot','[调用失败] '+err.message+'\n\n请在设置页配置API地址和Key后使用。也可选中页面文字点击「AI解释」快速释义。');
+  }).then(function(){ btn.disabled=false; });
+}
+async function callAIAssistant(userText){
+  var cfg=S.settings;
+  if(!cfg.apiUrl||!cfg.apiKey||!cfg.model){
+    throw new Error('未配置API');
+  }
+  var url=cfg.apiUrl.replace(/\/+$/,'');
+  var sysPrompt='你是"千手学习Agent"的AI助手，帮助学习者理解L3认证课程中的概念。学习者正在学习智惠工程师(业务顾问方向L3)的内容，涉及国数集团项目实战。请用简洁、通俗的中文回答，结合实际场景解释。如果用户选中了页面文字让你解释，请针对那段文字做通俗易懂的解读。';
+  var msgs=[{role:'system',content:sysPrompt}];
+  aiPanelMsgs.forEach(function(m){ msgs.push(m); });
+  if(msgs.length>12) msgs=[{role:'system',content:sysPrompt}].concat(msgs.slice(-11));
+  var res=await fetch(url+'/chat/completions',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','Authorization':'Bearer '+cfg.apiKey},
+    body:JSON.stringify({model:cfg.model,messages:msgs,temperature:0.7,max_tokens:800})
+  });
+  if(!res.ok){ var e=await res.text().catch(function(){return '';}); throw new Error('HTTP '+res.status+' '+e.slice(0,80)); }
+  var data=await res.json();
+  return data.choices[0].message.content;
+}
+
+/* ---- 划选文字 → AI解释 ---- */
+let selText='';
+document.addEventListener('mouseup',function(e){
+  // 如果点击在AI面板内或浮动按钮上，不处理
+  if(e.target.closest('.ai-panel')||e.target.closest('.ai-fab')||e.target.closest('.sel-popup')) return;
+  var sel=window.getSelection();
+  var text=sel.toString().trim();
+  var popup=document.getElementById('selPopup');
+  if(text&&text.length>=2&&text.length<=500){
+    selText=text;
+    var range=sel.getRangeAt(0);
+    var rect=range.getBoundingClientRect();
+    popup.style.display='block';
+    popup.style.left=Math.max(10,rect.left+rect.width/2-40)+'px';
+    popup.style.top=(rect.top-36)+'px';
+  }else{
+    popup.style.display='none';
+    selText='';
+  }
+});
+function explainSelection(){
+  if(!selText){ return; }
+  document.getElementById('selPopup').style.display='none';
+  // 打开面板
+  if(!document.getElementById('aiPanel').classList.contains('open')){
+    toggleAIPanel();
+  }
+  // 添加上下文消息
+  addAIPanelMsg('context','已选中：'+selText.slice(0,200)+(selText.length>200?'…':''));
+  // 发送解释请求
+  var prompt='请通俗解释以下内容（结合国数集团项目场景举例说明）：\n\n'+selText;
+  addAIPanelMsg('user',prompt);
+  aiPanelMsgs.push({role:'user',content:prompt});
+  var btn=document.getElementById('aiPanelSend');
+  btn.disabled=true;
+  callAIAssistant(prompt).then(function(reply){
+    addAIPanelMsg('bot',reply);
+    aiPanelMsgs.push({role:'assistant',content:reply});
+    if(S.settings&&S.settings.ttsAutoPlay){ setTimeout(function(){speakText(reply);},300); }
+  }).catch(function(err){
+    addAIPanelMsg('bot','[解释失败] '+err.message);
+  }).then(function(){ btn.disabled=false; });
+  selText='';
 }
 
 /* 初始化 */
