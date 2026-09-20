@@ -2971,6 +2971,30 @@ function selectInsightTopic(el){
   document.querySelectorAll('.insight-topic').forEach(t=>t.classList.toggle('active', t===el));
   renderInsightContent();
 }
+/* 轻量 Markdown 渲染（加粗/列表/换行/标题） */
+function formatMarkdown(text){
+  if(!text) return '';
+  var lines=String(text).split('\n');
+  var out='';
+  for(var i=0;i<lines.length;i++){
+    var line=lines[i];
+    if(/^\s*\*\*(.+?)\*\*\s*$/.test(line)){
+      out+='<div style="font-weight:800;font-size:14px;color:var(--ink);margin:14px 0 6px;padding-left:8px;border-left:3px solid var(--cinnabar)">'+esc(RegExp.$1)+'</div>';
+    }else if(/^\s*[-]\s+(.+)/.test(line)){
+      out+='<div style="padding-left:18px;text-indent:-14px;margin:3px 0;font-size:13px;line-height:1.7"><span style="color:var(--cinnabar)">&#9679;</span> '+esc(RegExp.$1)+'</div>';
+    }else if(/^\s*\d+[.)]\s+(.+)/.test(line)){
+      out+='<div style="padding-left:18px;text-indent:-14px;margin:3px 0;font-size:13px;line-height:1.7">'+esc(line.replace(/^\s*(\d+[.)])\s+/,'$1 '))+'</div>';
+    }else if(/^\s*$/.test(line)){
+      out+='<div style="height:6px"></div>';
+    }else{
+      out+='<div style="font-size:13px;line-height:1.7;margin:3px 0">'+inlineBold(line)+'</div>';
+    }
+  }
+  return out;
+}
+function inlineBold(text){
+  return esc(text).replace(/\*\*(.+?)\*\*/g,'<b style="color:var(--ink)">$1</b>');
+}
 function renderInsightContent(){
   const container=document.getElementById('insightContent');
   if(!container) return;
@@ -3037,20 +3061,40 @@ async function generateInsightAI(){
     }
   }
   const sysPrompt=`你是"千手学习Agent"的行业资讯助手。学习者正在学习"智惠工程师L3认证"课程。
-当前学习主题：「${topic}」${d?'（第'+day+'天：'+d.t+'）':''}
+当前学习主题：『${topic}』${d?'（第'+day+'天：'+d.t+'）':''}
 ${briefContext}
 
-请围绕「${topic}」生成一份简洁的行业洞察摘要：
-1. 这个领域2025-2026年的最新发展趋势（2-3个要点）
-2. 值得关注的重大事件或里程碑（1-2个）
-3. 推荐深入阅读的3个方向（每个方向给出搜索关键词）
+请围绕『${topic}』生成一份行业洞察摘要。严格使用中文输出，专有名词如 GPT、RAG、MCP、A2A、K8s 等行业缩写可保留英文。
 
-要求：简洁、准确、有信息量，不超过300字。用中文。`;
+请按以下格式输出，每节用加粗标题，内容用要点列表：
+
+**趋势**
+- 要点1
+- 要点2
+- 要点3
+
+**里程碑**
+- 事件1
+
+**深入阅读方向**
+- 方向1（搜索关键词：xxx）
+- 方向2（搜索关键词：xxx）
+- 方向3（搜索关键词：xxx）
+
+要求：内容准确、信息密度高，每条不超过两句话。使用Markdown格式。`;
   try{
     const res=await fetch(url+'/chat/completions',{
       method:'POST',
       headers:{'Content-Type':'application/json','Authorization':'Bearer '+cfg.apiKey},
-      body:JSON.stringify({model:cfg.model,messages:[{role:'system',content:sysPrompt}],temperature:0.5,max_tokens:800})
+      body:JSON.stringify({
+        model:cfg.model,
+        messages:[
+          {role:'system',content:sysPrompt},
+          {role:'user',content:'请围绕「'+topic+'」生成行业洞察摘要。'}
+        ],
+        temperature:0.5,
+        max_tokens:800
+      })
     });
     if(!res.ok){
       let errDetail='';
@@ -3059,7 +3103,7 @@ ${briefContext}
     }
     const data=await res.json();
     const content=data.choices[0].message.content;
-    container.innerHTML='<div class="insight-ai-content">'+esc(content)+'</div>';
+    container.innerHTML='<div class="insight-ai-content">'+formatMarkdown(content)+'</div>';
   }catch(err){
     container.innerHTML='<div style="color:var(--cinnabar);font-size:13px">生成失败：'+esc(err.message)+'</div><button class="btn btn-outline btn-sm" style="margin-top:8px" onclick="generateInsightAI()">重试</button>';
   }
