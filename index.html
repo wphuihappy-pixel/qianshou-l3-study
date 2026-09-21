@@ -813,27 +813,33 @@ mark{background:transparent;border-bottom:2px solid var(--cinnabar);color:inheri
 
 <div class="card">
       <h2><span class="hico">同步</span>多端数据同步</h2>
-      <div class="sub">通过 GitHub Gist 在电脑与手机之间同步学习数据（数据保存在你的 GitHub 账号私有 Gist 中）</div>
+      <div class="sub">通过 GitHub Gist 在电脑与手机之间自动同步学习数据，配置一次后全自动</div>
       <div class="set-grid">
         <div class="set-row"><label>GitHub Token</label><input id="setSyncToken" type="password" placeholder="ghp_…（需勾选 gist 权限）"><div class="hint">Personal Access Token，仅保存在本机浏览器，用于读写你的 Gist</div></div>
         <div class="set-row"><label>同步方式</label>
           <select id="setSyncMode">
-            <option value="manual">手动同步（推荐）</option>
-            <option value="auto">自动同步（每次打开页面静默合并）</option>
+            <option value="auto">自动同步（推荐：打开页面自动合并，学习后自动上传）</option>
+            <option value="manual">手动同步（需手动点上传/合并）</option>
           </select>
         </div>
       </div>
       <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px">
         <button class="btn btn-primary" onclick="syncSave()">保存同步配置</button>
-        <button class="btn btn-ghost" onclick="syncUpload()">上传到云端</button>
-        <button class="btn btn-ghost" onclick="syncMerge()">云端合并到本地</button>
+        <button class="btn btn-ghost" onclick="syncUpload()">立即上传</button>
+        <button class="btn btn-ghost" onclick="syncMerge()">立即合并</button>
         <button class="btn btn-outline" onclick="syncDownload()">云端覆盖本地</button>
       </div>
       <div id="syncStatus" style="font-size:13px;color:var(--ink2);padding:10px 12px;background:var(--card);border:1px dashed var(--line);margin-bottom:8px">尚未同步</div>
       <div style="font-size:12px;color:var(--ink3);line-height:1.7">
-        获取 Token：GitHub → Settings → Developer settings → Personal access tokens → Generate new token（classic），勾选 <b>gist</b> 权限。<br>
-        「上传」= 本地数据覆盖云端；「合并」= 两端数据取并集（推荐日常使用）；「覆盖」= 云端数据覆盖本地（恢复用）。<br>
-        首次上传会自动创建私有 Gist 并记住 ID，之后无需再操作。
+        <b>配置步骤（一次性，约2分钟）</b><br>
+        1. 打开 https://github.com/settings/tokens → Generate new token (classic)<br>
+        2. 勾选 <b>gist</b> 权限，生成后复制 Token（ghp_ 开头）<br>
+        3. 将 Token 填入上方输入框，同步方式选「自动同步」，点「保存同步配置」<br>
+        4. 点「立即上传」把当前数据推到云端<br>
+        5. 在另一台设备打开本页面，填入同一个 Token，选自动同步，保存后会自动拉取云端数据<br>
+        <br>
+        配置完成后日常使用无需任何操作：打开页面自动合并最新数据，学习后自动推送。<br>
+        「上传」= 本地数据覆盖云端；「合并」= 两端数据取并集（推荐）；「覆盖」= 云端覆盖本地（恢复用）。
       </div>
     </div>
 
@@ -1298,6 +1304,7 @@ function loadState(){
 }
 function saveState(){
   localStorage.setItem('qianshou_l3', JSON.stringify(S));
+  scheduleSyncPush();
 }
 function todayStr(){ const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
 function dayIndex(){
@@ -2551,6 +2558,7 @@ async function syncFetchRemote(){
   return JSON.parse(f.content);
 }
 async function syncUpload(){
+  if(!syncGetToken()){ syncSetStatus('请先填写 GitHub Token 并保存',true); return; }
   syncSetStatus('正在上传…');
   try{
     const gid=await syncEnsureGist();
@@ -2558,9 +2566,14 @@ async function syncUpload(){
     await syncApi('/gists/'+gid,'PATCH',{files:{[GIST_FILE]:{content}}});
     localStorage.setItem('qianshou_l3_synced',JSON.stringify(S));
     syncSetStatus('上传成功 '+new Date().toLocaleTimeString());
-  }catch(e){ syncSetStatus('上传失败：'+e.message,true); }
+  }catch(e){
+    var msg=e.message||'';
+    if(/Bad credentials/i.test(msg)) msg='Token无效或已过期，请检查 GitHub Token 是否正确';
+    syncSetStatus('上传失败：'+msg,true);
+  }
 }
 async function syncMerge(){
+  if(!syncGetToken()){ syncSetStatus('请先填写 GitHub Token 并保存',true); return; }
   syncSetStatus('正在合并…');
   try{
     const gid=await syncEnsureGist();
@@ -2575,24 +2588,35 @@ async function syncMerge(){
     }else{
       await syncUpload();
     }
-  }catch(e){ syncSetStatus('合并失败：'+e.message,true); }
+  }catch(e){
+    var msg=e.message||'';
+    if(/Bad credentials/i.test(msg)) msg='Token无效或已过期，请检查 GitHub Token 是否正确（需 gist 权限）';
+    else if(/404|Not Found/i.test(msg)) msg='Gist未找到，Token可能不属于创建该Gist的账号';
+    syncSetStatus('合并失败：'+msg,true);
+  }
 }
 async function syncDownload(){
+  if(!syncGetToken()){ syncSetStatus('请先填写 GitHub Token 并保存',true); return; }
   syncSetStatus('正在下载…');
   try{
     const gid=await syncEnsureGist();
     const remote=await syncFetchRemote();
     if(remote){ S=remote; saveState(); syncSetStatus('已覆盖本地 '+new Date().toLocaleTimeString()); renderAll(); }
     else syncSetStatus('云端无数据',true);
-  }catch(e){ syncSetStatus('下载失败：'+e.message,true); }
+  }catch(e){
+    var msg=e.message||'';
+    if(/Bad credentials/i.test(msg)) msg='Token无效或已过期，请检查 GitHub Token';
+    syncSetStatus('下载失败：'+msg,true);
+  }
 }
 function syncSave(){
   const el=document.getElementById('setSyncToken');
   if(el.value.trim()) S.settings.syncToken=el.value.trim();
+  if(!S.settings.syncToken){ syncSetStatus('请先填写 GitHub Token',true); return; }
   S.settings.syncGistId=S.settings.syncGistId||'';
   const sm=document.getElementById('setSyncMode');
   if(sm) S.settings.syncMode=sm.value;
-  saveState(); syncSetStatus('同步配置已保存');
+  saveState(); syncSetStatus('同步配置已保存，Token：'+S.settings.syncToken.slice(0,8)+'…');
 }
 function syncClear(){
   S.settings.syncToken=''; S.settings.syncGistId=''; saveState();
@@ -3613,11 +3637,39 @@ function explainSelection(){
 
 /* 初始化 */
 document.addEventListener('DOMContentLoaded',()=>{loadCustomTerms();renderAll();updateReviewBadge();autoSyncInit();});
-/* 自动同步：若配置了自动模式且有Token，静默合并云端数据 */
+/* 自动同步：配置了自动模式且有Token，打开页面时合并、学习后自动上传 */
+let syncPushTimer=null, syncBusy=false;
+function scheduleSyncPush(){
+  const s=S.settings||{};
+  if(s.syncMode!=='auto'||!s.syncToken) return;
+  if(syncPushTimer) clearTimeout(syncPushTimer);
+  syncPushTimer=setTimeout(()=>{ doSyncPush(); }, 3000);
+}
+async function doSyncPush(){
+  if(syncBusy) return;
+  const s=S.settings||{};
+  if(s.syncMode!=='auto'||!s.syncToken) return;
+  syncBusy=true;
+  try{
+    const gid=await syncEnsureGist();
+    const remote=await syncFetchRemote();
+    if(remote){
+      const merged=syncMergeData(S,remote);
+      S=merged; localStorage.setItem('qianshou_l3',JSON.stringify(S));
+    }
+    const content=JSON.stringify(S,null,2);
+    await syncApi('/gists/'+gid,'PATCH',{files:{[GIST_FILE]:{content}}});
+    syncSetStatus('自动同步成功 '+new Date().toLocaleTimeString());
+  }catch(e){ /* 静默失败，不打扰用户 */ }
+  syncBusy=false;
+}
 function autoSyncInit(){
   const s=S.settings||{};
   if(s.syncMode==='auto'&&s.syncToken&&s.syncGistId){
-    setTimeout(()=>{ syncMerge().then(()=>{ /* 静默完成 */ }); },1500);
+    syncBusy=true;
+    setTimeout(()=>{ syncMerge().then(()=>{ syncBusy=false; /* 静默完成 */ }).catch(()=>{ syncBusy=false; }); },1500);
+    // 每5分钟自动同步一次（兜底）
+    setInterval(()=>{ if(!syncBusy) doSyncPush(); }, 300000);
   }
 }
 </script>
