@@ -2496,7 +2496,7 @@ function syncMergeData(a,b){
   ['apiUrl','apiKey','model','aiMode','ttsMode','ttsModel','ttsVoiceId','ttsApiUrl','ttsAutoPlay','ttsSpeed'].forEach(function(k){
     if(!out.settings[k]&&sB[k]) out.settings[k]=sB[k];
   });
-  if(sB.syncToken&&!out.settings.syncToken) out.settings.syncToken=sB.syncToken;
+  /* Token只存本机：不从云端采信Token（云端Token无效且不可信），GistId仍从云端获取 */
   if(sB.syncGistId&&!out.settings.syncGistId) out.settings.syncGistId=sB.syncGistId;
   // 学习进度 current
   const curA=a&&a.current?JSON.parse(JSON.stringify(a.current)):{};
@@ -2557,14 +2557,20 @@ async function syncFetchRemote(){
   if(!f) return null;
   return JSON.parse(f.content);
 }
+/* 上传数据前剥离Token：GitHub令牌一旦出现在Gist内容中会被GitHub安全扫描自动撤销，Token只存本机浏览器 */
+function syncPayload(){
+  const c=JSON.parse(JSON.stringify(S));
+  if(c.settings) delete c.settings.syncToken;
+  return JSON.stringify(c,null,2);
+}
 async function syncUpload(){
   if(!syncGetToken()){ syncSetStatus('请先填写 GitHub Token 并保存',true); return; }
   syncSetStatus('正在上传…');
   try{
     const gid=await syncEnsureGist();
-    const content=JSON.stringify(S,null,2);
+    const content=syncPayload();
     await syncApi('/gists/'+gid,'PATCH',{files:{[GIST_FILE]:{content}}});
-    localStorage.setItem('qianshou_l3_synced',JSON.stringify(S));
+    localStorage.setItem('qianshou_l3_synced',content);
     syncSetStatus('上传成功 '+new Date().toLocaleTimeString());
   }catch(e){
     var msg=e.message||'';
@@ -2581,7 +2587,7 @@ async function syncMerge(){
     if(remote){
       const merged=syncMergeData(S,remote);
       S=merged; saveState();
-      const content=JSON.stringify(S,null,2);
+      const content=syncPayload();
       await syncApi('/gists/'+gid,'PATCH',{files:{[GIST_FILE]:{content}}});
       syncSetStatus('合并成功 '+new Date().toLocaleTimeString());
       renderAll();
@@ -2601,7 +2607,15 @@ async function syncDownload(){
   try{
     const gid=await syncEnsureGist();
     const remote=await syncFetchRemote();
-    if(remote){ S=remote; saveState(); syncSetStatus('已覆盖本地 '+new Date().toLocaleTimeString()); renderAll(); }
+    if(remote){
+      /* 覆盖本地时保留本机的Token与同步模式（云端数据里的Token不可信） */
+      const keepTok=S.settings.syncToken||'';
+      const keepMode=S.settings.syncMode||'';
+      S=remote;
+      if(keepTok) S.settings.syncToken=keepTok;
+      if(keepMode) S.settings.syncMode=keepMode;
+      saveState(); syncSetStatus('已覆盖本地 '+new Date().toLocaleTimeString()); renderAll();
+    }
     else syncSetStatus('云端无数据',true);
   }catch(e){
     var msg=e.message||'';
@@ -3657,7 +3671,7 @@ async function doSyncPush(){
       const merged=syncMergeData(S,remote);
       S=merged; localStorage.setItem('qianshou_l3',JSON.stringify(S));
     }
-    const content=JSON.stringify(S,null,2);
+    const content=syncPayload();
     await syncApi('/gists/'+gid,'PATCH',{files:{[GIST_FILE]:{content}}});
     syncSetStatus('自动同步成功 '+new Date().toLocaleTimeString());
   }catch(e){ /* 静默失败，不打扰用户 */ }
