@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>千手-淘淘英语学习</title>
+<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="../shared/agent-nav.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📖</text></svg>">
+</head>
+<body>
+<div id="app">
+  <!-- 顶栏 -->
+  <header class="topbar">
+      <div class="topbar-inner">
+        <button type="button" id="nav-back" class="nav-back-btn" aria-label="返回上一页">‹ 返回</button>
+        <div class="logo" onclick="App.showView('home')">
+          <span class="logo-mark">千手</span>
+          <span class="logo-text">淘淘英语学习</span>
+        </div>
+      <nav class="nav">
+        <a data-view="home" class="nav-link active" onclick="App.showView('home')">首页</a>
+        <a data-view="study" class="nav-link" onclick="App.showView('study')">学习训练</a>
+        <a data-view="browse" class="nav-link" onclick="App.showView('browse')">词库浏览</a>
+        <a data-view="review" class="nav-link" onclick="App.showView('review')">复习计划</a>
+        <a data-view="parent" class="nav-link" onclick="App.showView('parent')">家长报告</a>
+        <a data-view="manage" class="nav-link" onclick="App.showView('manage')">词库管理</a>
+        <a data-view="settings" class="nav-link" onclick="App.showView('settings')">设置</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main-content">
+
+    <!-- ============ 首页 ============ -->
+    <section id="view-home" class="view active">
+      <div class="hero">
+        <h1 class="hero-title">今天也要努力学英语</h1>
+        <p class="hero-sub">离线词汇训练 · 记录学习证据 · 安排间隔复习</p>
+      </div>
+
+      <div class="stats-row">
+        <div class="stat-card">
+          <div class="stat-num" id="stat-total">216</div>
+          <div class="stat-label">总词条数</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-num" id="stat-learned">0</div>
+          <div class="stat-label">有训练记录</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-num" id="stat-mastered">0</div>
+          <div class="stat-label">基本掌握</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-num" id="stat-due">0</div>
+          <div class="stat-label">待复习</div>
+        </div>
+      </div>
+
+      <div class="quick-actions">
+        <div class="action-card big" onclick="App.resumeSession()">
+          <div class="action-icon">▶</div>
+          <div class="action-title">继续上次训练</div>
+          <div class="action-desc">恢复未完成的训练，进度不丢失</div>
+        </div>
+        <div class="action-card" onclick="App.startFocusMode()">
+          <div class="action-icon">◈</div>
+          <div class="action-title">专注模式</div>
+          <div class="action-desc">25 分钟短回合训练</div>
+        </div>
+        <div class="action-card" onclick="App.showView('browse')">
+          <div class="action-icon">☰</div>
+          <div class="action-title">浏览词库</div>
+          <div class="action-desc">按词库、等级、主题浏览</div>
+        </div>
+        <div class="action-card" onclick="App.showView('review')">
+          <div class="action-icon">⏰</div>
+          <div class="action-title">复习计划</div>
+          <div class="action-desc">查看到期复习词</div>
+        </div>
+        <div class="action-card" onclick="App.showView('parent')">
+          <div class="action-icon">📊</div>
+          <div class="action-title">家长报告</div>
+          <div class="action-desc">学习证据与薄弱环节</div>
+        </div>
+      </div>
+
+      <div class="home-sets" id="home-sets"></div>
+    </section>
+
+    <!-- ============ 学习训练 ============ -->
+    <section id="view-study" class="view">
+      <div id="study-setup" class="study-setup">
+        <h2>选择训练方式</h2>
+        <div class="setup-grid">
+          <div class="setup-card" onclick="App.startTraining('mixed')">
+            <div class="setup-title">混合训练</div>
+            <div class="setup-desc">到期复习词优先，加入少量新词，题型随机</div>
+          </div>
+          <div class="setup-card" onclick="App.startTraining('recognition')">
+            <div class="setup-title">识义训练</div>
+            <div class="setup-desc">英语 → 中文释义（选择 + 回忆）</div>
+          </div>
+          <div class="setup-card" onclick="App.startTraining('spelling')">
+            <div class="setup-title">拼写训练</div>
+            <div class="setup-desc">中文 → 英语拼写（主动提取）</div>
+          </div>
+          <div class="setup-card" onclick="App.startTraining('newonly')">
+            <div class="setup-title">只学新词</div>
+            <div class="setup-desc">从未学过的词，建立初步认识</div>
+          </div>
+          <div class="setup-card" onclick="App.startListeningTraining()">
+            <div class="setup-title">听辨训练</div>
+            <div class="setup-desc">听发音选词 / 听写，锻炼听力</div>
+          </div>
+          <div class="setup-card" onclick="App.startSpeakingTraining()">
+            <div class="setup-title">朗读训练</div>
+            <div class="setup-desc">标准音 + 录音 + 有依据的判断</div>
+          </div>
+          <div class="setup-card" onclick="App.startContextTraining()">
+            <div class="setup-title">语境训练</div>
+            <div class="setup-desc">在例句中理解词义</div>
+          </div>
+          <div class="setup-card" onclick="App.baselineTest(document.getElementById('round-scope').value)">
+            <div class="setup-title">基线测评</div>
+            <div class="setup-desc">短测评了解已掌握情况</div>
+          </div>
+        </div>
+        <div class="setup-rounds">
+          <label>本轮题数：</label>
+          <select id="round-size">
+            <option value="10">10 题</option>
+            <option value="15" selected>15 题</option>
+            <option value="20">20 题</option>
+            <option value="30">30 题</option>
+          </select>
+          <label>词库范围：</label>
+          <select id="round-scope" multiple size="3">
+            <option value="all" selected>全部词库</option>
+          </select>
+          <span class="setup-hint">词库可多选（按住 Ctrl/Command 或直接点选多项）</span>
+        </div>
+      </div>
+
+      <div id="study-session" class="study-session hidden">
+        <div class="session-header">
+          <button class="btn btn-ghost" onclick="App.exitSession()">✕ 退出</button>
+          <div class="session-progress">
+            <div class="progress-bar"><div class="progress-fill" id="session-progress"></div></div>
+            <span id="session-count">0 / 0</span>
+          </div>
+          <div class="session-stats">
+            <span id="session-correct">✓ 0</span>
+            <span id="session-wrong">✗ 0</span>
+          </div>
+        </div>
+
+        <div class="question-area" id="question-area">
+          <!-- 动态生成题目 -->
+        </div>
+
+        <div class="session-footer hidden" id="session-footer">
+          <div class="feedback-area" id="feedback-area"></div>
+          <div class="footer-actions">
+            <button class="btn btn-outline" id="btn-hint" onclick="App.requestHint()">提示</button>
+            <button class="btn btn-outline" id="btn-idk" onclick="App.sayIdk()">我不知道</button>
+            <button class="btn btn-primary hidden" id="btn-next" onclick="App.nextQuestion()">下一题 →</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="session-summary" class="session-summary hidden">
+        <!-- 回合总结 -->
+      </div>
+    </section>
+
+    <!-- ============ 词库浏览 ============ -->
+    <section id="view-browse" class="view">
+      <div class="view-header">
+        <h2>词库浏览</h2>
+        <p class="view-sub">按词库浏览，点击词条查看详情；支持搜索与筛选</p>
+      </div>
+      <div class="set-tabs" id="set-tabs">
+      </div>
+      <div class="browse-tools">
+        <input type="text" id="browse-search" placeholder="搜索单词或释义…" oninput="App.renderBrowseList()">
+        <select id="browse-filter" onchange="App.renderBrowseList()">
+          <option value="all">全部状态</option>
+          <option value="unlearned">未学习</option>
+          <option value="learning">练习中</option>
+          <option value="mastered">基本掌握</option>
+        </select>
+        <select id="browse-level" onchange="App.renderBrowseList()">
+          <option value="all">全部等级</option>
+        </select>
+      </div>
+      <div class="word-list" id="word-list"></div>
+    </section>
+
+    <!-- ============ 复习计划 ============ -->
+    <section id="view-review" class="view">
+      <div class="view-header">
+        <h2>复习计划</h2>
+        <p class="view-sub">按间隔复习规则，程序自动安排每个词的下次复习时间</p>
+      </div>
+      <div class="review-summary" id="review-summary"></div>
+      <div class="due-list-header">
+        <h3>待复习词</h3>
+        <button class="btn btn-primary" onclick="App.startTraining('review')">开始复习训练</button>
+      </div>
+      <div class="word-list" id="due-list"></div>
+    </section>
+
+    <!-- ============ 家长报告 ============ -->
+      <div id="view-parent" class="view">
+      <div class="view-header">
+        <h2>家长报告</h2>
+        <p class="view-sub">基于学习证据的客观报告，不做人身评价</p>
+      </div>
+      <div id="cycle-info"></div>
+      <div id="parent-report"></div>
+      <div class="report-actions">
+        <button class="btn btn-primary" onclick="App.exportPaperPack()">导出纸质巩固包</button>
+        <button class="btn btn-outline" onclick="App.exportData('json')">导出学习数据</button>
+      </div>
+    </div>
+
+    <!-- ============ 词库管理 ============ -->
+    <section id="view-manage" class="view">
+      <div class="view-header">
+        <h2>词库管理</h2>
+        <p class="view-sub">添加、编辑、删除词条；支持 CSV 导入导出</p>
+      </div>
+      <div class="manage-tools">
+        <button class="btn btn-primary" onclick="App.showAddWord()">+ 添加词条</button>
+        <button class="btn btn-outline" onclick="document.getElementById('csv-import').click()">导入 CSV</button>
+        <button class="btn btn-outline" onclick="App.exportCSV()">导出 CSV</button>
+        <button class="btn btn-outline" onclick="App.newSet()">新建词库</button>
+        <button class="btn btn-outline" onclick="App.downloadImportTemplate()">下载导入模板</button>
+        <button class="btn btn-outline" onclick="App.deleteSet(App.currentSet)">删除当前词库</button>
+        <input type="file" id="csv-import" accept=".csv" style="display:none" onchange="App.importCSV(this)">
+      </div>
+      <div id="edit-form" class="edit-form hidden">
+        <h3 id="edit-form-title">添加词条</h3>
+        <input type="hidden" id="edit-word-id">
+        <div class="form-row">
+          <input type="text" id="edit-lemma" placeholder="英文单词或短语">
+          <input type="text" id="edit-pron" placeholder="音标（可选）">
+        </div>
+        <div class="form-row">
+          <input type="text" id="edit-pos" placeholder="词性（如 n. / vt. / adj. / 短语）">
+          <select id="edit-set">
+            <option value="day1">第一天</option>
+            <option value="day2">第二天</option>
+            <option value="day3">第三天</option>
+          </select>
+        </div>
+        <textarea id="edit-meanings" placeholder="中文释义（多个意思用分号分隔）"></textarea>
+        <div class="form-actions">
+          <button class="btn btn-primary" onclick="App.saveWord()">保存</button>
+          <button class="btn btn-ghost" onclick="App.hideEditForm()">取消</button>
+        </div>
+      </div>
+      <div class="word-list" id="manage-list"></div>
+    </section>
+
+    <!-- ============ 设置 ============ -->
+    <section id="view-settings" class="view">
+      <div class="view-header">
+        <h2>设置</h2>
+      </div>
+      <div class="settings-grid">
+        <div class="settings-card">
+          <h3>学习偏好</h3>
+          <label class="setting-item">
+            <span>新词每轮上限</span>
+            <input type="number" id="cfg-newlimit" min="3" max="20" value="8" onchange="App.saveSetting('newLimit', this.value)">
+          </label>
+          <label class="setting-item">
+            <span>发音语速</span>
+            <select id="cfg-rate" onchange="App.saveSetting('speechRate', this.value)">
+              <option value="0.8">慢速</option>
+              <option value="1.0" selected>正常</option>
+              <option value="1.2">快速</option>
+            </select>
+          </label>
+        </div>
+        <div class="settings-card">
+          <h3>数据管理</h3>
+          <div class="setting-item">
+            <span>学习记录保存位置：本机浏览器 localStorage</span>
+          </div>
+          <div class="setting-item">
+            <button class="btn btn-outline" onclick="App.exportData('json')">导出全部数据</button>
+            <button class="btn btn-outline" onclick="App.exportData('csv')">导出 CSV</button>
+          </div>
+          <div class="setting-item">
+            <button class="btn btn-outline" onclick="document.getElementById('data-import').click()">导入数据备份</button>
+            <input type="file" id="data-import" accept=".json" style="display:none" onchange="App.importData(this)">
+          </div>
+          <div class="setting-item">
+            <button class="btn btn-danger" onclick="App.confirmReset()">清空学习记录</button>
+          </div>
+        </div>
+        <div class="settings-card">
+          <h3>云同步（手机/电脑学习记录同步）</h3>
+          <p class="sync-help">启用后，学习记录自动保存到你的 GitHub 私有仓库，手机和电脑打开同一链接即可继续学习，进度互通。</p>
+          <label class="setting-item">
+            <span>启用云同步</span>
+            <input type="checkbox" id="sync-enabled">
+          </label>
+          <label class="setting-item">
+            <span>GitHub 用户名</span>
+            <input type="text" id="sync-user" value="wphuihappy-pixel">
+          </label>
+          <label class="setting-item">
+            <span>数据仓库名</span>
+            <input type="text" id="sync-repo" value="taotao-english-data">
+          </label>
+          <label class="setting-item">
+            <span>访问令牌（PAT）</span>
+            <input type="password" id="sync-token" placeholder="github_pat_…（仅授权该仓库）">
+          </label>
+          <div class="setting-item">
+            <button class="btn btn-primary" onclick="App.saveSyncConfig()">保存同步配置</button>
+            <button class="btn btn-outline" onclick="App.syncNow()">立即同步</button>
+          </div>
+          <div class="setting-item">
+            <span id="sync-status" class="sync-status off">未启用</span>
+          </div>
+          <p class="sync-help">令牌生成：GitHub → Settings → Developer settings → Fine-grained tokens → Generate，仓库选 taotao-english-data，权限只勾 Contents（Read and write）。令牌只存在本机浏览器，不会发给任何第三方。</p>
+        </div>
+        <div class="settings-card">
+          <h3>AI 与语音（共享设置）</h3>
+          <p>AI 服务、语音偏好、同步和隐私的共享配置在<b>千手学习Agent 首页 → 设置中心</b>统一管理，本栏目直接使用。</p>
+          <div class="setting-item">
+            <span>AI 服务状态</span>
+            <span id="ai-shared-status">检测中…</span>
+          </div>
+          <div class="setting-item">
+            <span>语音能力</span>
+            <span id="voice-shared-status">检测中…</span>
+          </div>
+        </div>
+        <div class="settings-card">
+          <h3>关于</h3>
+          <p>千手-淘淘英语学习 · 离线词汇训练器原型</p>
+          <p>依据《AI 英语教练 V1.0 产品设计文档》实现部分学习流程</p>
+          <p>词库来源：第一天.pdf / 第二天.pdf / 第三天.pdf（216词条）+ 自编商务英语示例</p>
+          <p class="ver">程序控制学习逻辑 · 证据驱动掌握度更新 · 全程本地离线运行</p>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- 专注模式遮罩 -->
+  <div id="focus-overlay" class="focus-overlay hidden">
+    <div class="focus-content">
+      <div class="focus-timer" id="focus-timer">25:00</div>
+      <div class="focus-tip">专注回合进行中</div>
+      <div class="focus-controls">
+        <button class="btn btn-ghost" onclick="App.pauseFocus()">暂停</button>
+        <button class="btn btn-ghost" onclick="App.endFocus()">结束回合</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 提示弹窗 -->
+  <div id="toast" class="toast hidden"></div>
+
+  <!-- 确认弹窗 -->
+  <div id="confirm-modal" class="modal hidden">
+    <div class="modal-content">
+      <p id="confirm-text"></p>
+      <div class="modal-actions">
+        <button class="btn btn-primary" id="confirm-yes">确认</button>
+        <button class="btn btn-ghost" id="confirm-no" onclick="App.closeConfirm()">取消</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 词条详情弹层 -->
+  <div id="word-detail-modal" class="word-detail-modal hidden"></div>
+
+  <!-- AI 解释弹层 -->
+  <div id="ai-explain" class="modal hidden">
+    <div class="modal-content ai-modal-content">
+      <div class="wd-backbar">
+        <button class="btn btn-ghost" id="ai-explain-close">‹ 返回题目</button>
+        <span>AI 解释 / 词条说明</span>
+      </div>
+      <div id="ai-explain-body" style="text-align:left;margin-top:12px"></div>
+    </div>
+  </div>
+
+  <footer class="app-footer">
+    <span>千手-淘淘英语学习 · 本地离线应用 · 数据仅存于本机</span>
+  </footer>
+</div>
+
+<script src="js/data.js"></script>
+<script src="js/examples.js"></script>
+<script src="js/app.js"></script>
+<script src="../shared/shared.js"></script>
+<script src="js/voice.js"></script>
+<script src="js/learn.js"></script>
+<script src="../shared/agent-nav.js" data-agent-app="english" data-agent-page="英语学习"></script>
+</body>
+</html>

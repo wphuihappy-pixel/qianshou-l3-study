@@ -1,0 +1,75 @@
+/* ============================================================
+   千手学习Agent · 共享返回导航栏（统一入口返回机制）
+   全项目核心体验要求：任何页面跳转后都能可靠返回原页面
+   ============================================================ */
+#agent-navbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 44px;
+  z-index: 999999;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 12px;
+  background: #1c1a17;
+  color: #f2eee7;
+  font-family: "PingFang SC", "Microsoft YaHei", "Helvetica Neue", sans-serif;
+  font-size: 14px;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.08), 0 2px 8px rgba(0, 0, 0, 0.25);
+  user-select: none;
+}
+
+#agent-navbar .an-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 14px 6px 10px;
+  background: #fffdf8;
+  color: #1c1a17;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 4px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+  flex-shrink: 0;
+}
+#agent-navbar .an-back:hover { background: #e8e2d6; }
+
+#agent-navbar .an-back .an-arrow { font-size: 15px; line-height: 1; }
+
+#agent-navbar .an-title {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+}
+#agent-navbar .an-brand { font-weight: 700; letter-spacing: 0.05em; font-size: 13px; }
+#agent-navbar .an-sep { color: rgba(242, 238, 231, 0.4); font-size: 12px; }
+#agent-navbar .an-page {
+  color: #d8d2c6;
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 页面让位：内容整体下移，粘性顶栏贴在导航栏下方 */
+html.agent-nav-on { padding-top: 44px; }
+html.agent-nav-on body.an-app-english .topbar { top: 44px; }
+html.agent-nav-on body.an-app-chan .sidebar { top: 44px; }
+
+/* 手机端：返回按钮更大、更易触达 */
+@media (max-width: 768px) {
+  #agent-navbar { height: 48px; padding: 0 8px; }
+  html.agent-nav-on { padding-top: 48px; }
+  html.agent-nav-on body.an-app-english .topbar { top: 48px; }
+  html.agent-nav-on body.an-app-chan .sidebar { top: 48px; }
+  #agent-navbar .an-back { padding: 8px 12px; font-size: 14px; min-height: 36px; }
+  #agent-navbar .an-title { flex: 1; }
+  #agent-navbar .an-sub { max-width: 45vw; }
+}

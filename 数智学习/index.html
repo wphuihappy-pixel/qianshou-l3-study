@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>数智学习 · 千手学习Agent</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>智</text></svg>">
+<link rel="stylesheet" href="app.css">
+<!-- 解析库（本地 vendor，完全离线可用；镜像来源：jsdelivr CDN） -->
+<script src="vendor/jszip.min.js"></script>
+<script src="vendor/pdf.min.js"></script>
+<script>
+  if (window.pdfjsLib) {
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'vendor/pdf.worker.min.js';
+  }
+</script>
+<script src="vendor/mammoth.browser.min.js"></script>
+<script src="vendor/lame.min.js"></script>
+<script src="vendor/terms-slim.js"></script>
+</head>
+<body>
+
+<aside class="sidebar">
+  <div class="brand">
+    <div class="logo">智</div>
+    <div class="bname">数智学习</div>
+    <div class="bsub">课程 · 音频 · 批注 · 画像</div>
+  </div>
+  <nav class="nav" id="nav"></nav>
+  <div class="footer-side">
+    数据存本机 · 原件只读 · 显式反馈优先<br>
+    演示内容醒目标注
+  </div>
+</aside>
+
+<main class="main">
+  <header class="topbar">
+    <div>
+      <h1 id="page-title">今日学习台</h1>
+      <div class="sub" id="page-sub">两步内继续上次学习</div>
+    </div>
+    <div class="tools"></div>
+  </header>
+
+  <section class="view" id="view-home"></section>
+  <section class="view hidden" id="view-sources"></section>
+  <section class="view hidden" id="view-competency"></section>
+  <section class="view hidden" id="view-goals"></section>
+  <section class="view hidden" id="view-course"></section>
+  <section class="view hidden" id="view-lesson"></section>
+  <section class="view hidden" id="view-reader"></section>
+  <section class="view hidden" id="view-reviews"></section>
+  <section class="view hidden" id="view-profile"></section>
+  <section class="view hidden" id="view-settings"></section>
+</main>
+
+<div id="toast"></div>
+
+<script src="../shared/shared.js"></script>
+<script src="js/db.js"></script>
+<script src="js/sync.js"></script>
+<script src="js/parse.js"></script>
+<script src="js/tts.js"></script>
+<script src="js/reader.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
