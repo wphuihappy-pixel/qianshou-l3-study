@@ -200,9 +200,10 @@
     }, DEBOUNCE_MS);
   }
 
-  /* ---------- 启动 ---------- */
+/* ---------- 启动 ---------- */
   function start() {
     if (!isReady()) return;
+    if (state._pollTimer) clearInterval(state._pollTimer);
     setTimeout(function () {
       pullNow('startup').then(function (r) {
         /* 云端空/不比本地新，但本地有未推改动 → 启动时补推 */
@@ -215,6 +216,22 @@
     setInterval(function () {
       if (state.dirty && !state.syncing) pushNow('interval').catch(function () { });
     }, 300000);
+    /* 周期拉取（2026-10-09 修复）：页面可见时每 60s 拉一次云端，
+       另一端推的新数据自动同步到本端并刷新视图（此前只启动拉一次+兜底 push，双端常开时不同步）。
+       拉取前若本地有未推改动，先推再拉，避免拉取覆盖本地新改动。 */
+    state._pollTimer = setInterval(function () {
+      if (!isReady() || state.syncing) return;
+      if (document.hidden) return;
+      var run = state.dirty
+        ? pushNow('poll-push').then(function () { return pullNow('poll'); })
+        : pullNow('poll');
+      run.then(function (r) {
+        if (r === 'imported') {
+          /* 拉取到新数据：刷新当前视图让新内容可见 */
+          try { if (window.EApp && window.EApp.go && window.EApp.view) window.EApp.go(window.EApp.view); } catch (e) {}
+        }
+      }).catch(function () { });
+    }, 60000);
   }
 
   /* ---------- 设置页状态 ---------- */

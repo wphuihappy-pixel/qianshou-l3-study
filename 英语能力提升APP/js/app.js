@@ -1433,7 +1433,7 @@
       '<div class="set-row"><span class="status off" id="coach-sync-status">检测中…</span></div>' +
       '<div class="set-row"><button class="btn btn-ink btn-sm" id="btn-sync-now">立即同步（先推后拉）</button>' +
       '<button class="btn btn-outline btn-sm" id="btn-sync-pull">仅从云端拉取</button></div>' +
-      '<p class="hint">数据文件 coach-data.json（本栏目独占，与英语栏目互不干扰）。仓库/令牌在千手首页「设置中心 → 云同步」配置，配好即自动生效。"实时"的诚实含义：静态仓库无服务端推送，能做到的是变更后≈25秒自动上传+打开应用自动拉取。</p></div>' +
+      '<p class="hint">数据文件 coach-data.json（本栏目独占，与英语栏目互不干扰）。仓库/令牌在千手首页「设置中心 → 云同步」配置，配好即自动生效。"实时"的诚实含义：静态仓库无服务端推送，能做到的是变更后≈25秒自动上传 + 打开应用自动拉取 + <b>页面开着时每 60 秒自动拉取一次</b>。</p></div>' +
 
       '<div class="panel"><h2>语音识别（STT）· 本栏目微调</h2>' +
       '<p class="sub">主通道 MiniMax ASR（用户确认选型）。官方端点公开文档未能确认，默认按 OpenAI 兼容惯例实现，可用下方"测试识别"真实验证；路径不同就改"端点路径"。</p>' +
@@ -1449,6 +1449,10 @@
       '<div class="set-row"><span class="status off" id="stt-status">浏览器能力：' +
       (det.speechRecognition ? '语音识别可用' : '无原生识别') + ' · ' + (det.getUserMedia ? '麦克风可用' : '无麦克风') + '</span></div>' +
       '<p class="hint">隐私：MiniMax ASR 会把录音发给 MiniMax（需先在千手设置中心开启"允许云端语音判断"）；Web Speech 走浏览器厂商云服务（Edge 为 Azure）。两条路都是云端识别，本应用不做本地识别。</p></div>' +
+
+      '<div class="panel"><h2>基线测评</h2>' +
+      '<div class="set-row"><button class="btn btn-cinnabar btn-sm" id="btn-reassess">重新做基线测评（五段式 · 10–15分钟）</button></div>' +
+      '<p class="hint">适用：曾点过"跳过（先用演示模式看看）"、或觉得当前画像不准。重新测评只更新你的英语画像（水平/词汇量/弱项），学习记录保留不动，不会被清空。</p></div>' +
 
       '<div class="panel"><h2>数据（本栏目独立命名空间 coach_）</h2>' +
       '<div class="set-row"><button class="btn btn-outline btn-sm" id="btn-export">导出本栏目全部数据（JSON）</button>' +
@@ -1499,6 +1503,12 @@
         el.className = 'status fail';
         el.textContent = '失败：' + e.message;
       });
+    });
+    $('btn-reassess').addEventListener('click', function () {
+      modal('<h3>重新做基线测评？</h3><p class="kv">将开始五段式测评（阅读→听力→词汇→口语→写作，约10–15分钟）。完成后会用新结果更新你的英语画像（水平/词汇量/弱项/阶段起点），<b>学习记录、对话历史都保留不动</b>。</p>' +
+        '<div style="margin-top:14px;display:flex;gap:10px"><button class="btn btn-cinnabar" id="btn-reassess-go">开始测评</button>' +
+        '<button class="btn btn-outline" onclick="closeModal()">先不用</button></div>');
+      $('btn-reassess-go').addEventListener('click', function () { closeModal(); try { tabRoot.innerHTML = ''; } catch (e) { } startAssessment(); });
     });
     $('btn-export').addEventListener('click', function () {
       busy(true, '正在导出…');
