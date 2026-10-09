@@ -1320,6 +1320,11 @@ function esc(s){ return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&
    ============================================================ */
 const TITLES={today:'今日学习',plan:'30天计划',terms:'术语手册',insights:'专题资讯',review:'难题库',ai:'AI陪练',analysis:'学习分析',log:'学习日志',settings:'设置'};
 function nav(view){
+  if(!Object.prototype.hasOwnProperty.call(TITLES, view)) view='today';
+  if(location.hash==='#'+view){ applyView(view); return; }
+  location.hash=view;
+}
+function applyView(view){
   document.querySelectorAll('.nav-item').forEach(b=>b.classList.toggle('active', b.dataset.view===view));
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
   document.getElementById('panel-'+view).classList.add('active');
@@ -1334,8 +1339,14 @@ function nav(view){
   if(view==='ai') initAIChat();
   if(view==='log') renderLog();
 }
+window.addEventListener('hashchange',function(){
+  var v=(location.hash||'').replace('#','');
+  if(!Object.prototype.hasOwnProperty.call(TITLES,v)) v='today';
+  applyView(v);
+});
 window.nav=nav;
 document.querySelectorAll('.nav-item').forEach(b=>b.addEventListener('click',()=>nav(b.dataset.view)));
+(function(){ var v=(location.hash||'').replace('#',''); if(Object.prototype.hasOwnProperty.call(TITLES,v)) applyView(v); })();
 document.getElementById('btnCheckin')?.addEventListener('click',checkin);
 document.getElementById('btnStartJourney')?.addEventListener('click',()=>jOpen());
 
