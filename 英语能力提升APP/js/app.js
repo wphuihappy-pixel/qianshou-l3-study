@@ -141,13 +141,32 @@
     vocab: ['agent', 'task', 'plan', 'tool', 'check', 'team', 'build', 'product', 'faster', 'mistake', 'deploy', 'improve', 'manage', 'design', 'understand']
   };
 
+  /* ---------- 测评词表内置释义：自报"不认识"的词自动入库进复习队列（自己的真实弱词优先学） ---------- */
+  var ASSESS_GLOSS = {
+    agent: { meaning: '智能体；能替你执行任务的 AI 程序', pos: 'n.', pron: '/ˈeɪdʒənt/', example: 'An AI agent can plan and use tools.', related: ['AI agent', 'use an agent'] },
+    task: { meaning: '任务；要做的事情', pos: 'n.', pron: '/tæsk/', example: 'The agent does small tasks for me.', related: ['do a task', 'daily tasks'] },
+    plan: { meaning: '计划；规划', pos: 'n./v.', pron: '/plæn/', example: 'Let us plan the trip together.', related: ['make a plan', 'plan a trip'] },
+    tool: { meaning: '工具', pos: 'n.', pron: '/tuːl/', example: 'Search is a useful tool.', related: ['use a tool', 'the right tool'] },
+    check: { meaning: '检查；核对', pos: 'v.', pron: '/tʃek/', example: 'Please check the results.', related: ['check the results', 'double-check'] },
+    team: { meaning: '团队', pos: 'n.', pron: '/tiːm/', example: 'Our team has five people.', related: ['team member', 'team goal'] },
+    build: { meaning: '构建；开发', pos: 'v.', pron: '/bɪld/', example: 'We build software with AI help.', related: ['build a product', 'build an app'] },
+    product: { meaning: '产品', pos: 'n.', pron: '/ˈprɑːdʌkt/', example: 'The product saves time for small teams.', related: ['build a product', 'product team'] },
+    faster: { meaning: '更快的/更快地（fast 的比较级）', pos: 'adj./adv.', pron: '/ˈfæstər/', example: 'AI makes our work faster.', related: ['work faster', 'much faster'] },
+    mistake: { meaning: '错误', pos: 'n.', pron: '/mɪˈsteɪk/', example: 'Everyone makes mistakes.', related: ['make a mistake', 'learn from mistakes'] },
+    deploy: { meaning: '部署；上线运行', pos: 'v.', pron: '/dɪˈplɔɪ/', example: 'We deploy the app every week.', related: ['deploy an app', 'deploy to the cloud'] },
+    improve: { meaning: '改进；提升', pos: 'v.', pron: '/ɪmˈpruːv/', example: 'I want to improve my English.', related: ['improve skills', 'improve quality'] },
+    manage: { meaning: '管理', pos: 'v.', pron: '/ˈmænɪdʒ/', example: 'She manages the team.', related: ['manage a team', 'manage time'] },
+    design: { meaning: '设计', pos: 'v./n.', pron: '/dɪˈzaɪn/', example: 'They design the new workflow.', related: ['design a system', 'by design'] },
+    understand: { meaning: '理解；明白', pos: 'v.', pron: '/ˌʌndərˈstænd/', example: 'I understand the idea now.', related: ['easy to understand', 'make sure you understand'] }
+  };
+
   var assessState;
   function startAssessment() {
     assessState = {
       step: 0,
       reading: { right: 0, total: ASSESS.reading.qs.length, qi: 0, answers: [] },
       listening: { right: 0, total: ASSESS.listening.length, li: 0 },
-      vocab: { known: 0, total: ASSESS.vocab.length, marks: [] },
+      vocab: { known: 0, total: ASSESS.vocab.length, marks: [], unknown: [] },
       speaking: { transcript: '' },
       writing: { text: '' }
     };
@@ -228,7 +247,9 @@
         '<button class="btn btn-cinnabar btn-lg" id="btn-vocab-done">下一步：口语</button></div>');
       $('btn-vocab-done').addEventListener('click', function () {
         viewRoot.querySelectorAll('input[type=checkbox]').forEach(function (c) {
+          var w = ASSESS.vocab[+c.getAttribute('data-v')];
           if (c.checked) s.vocab.known++;
+          else if (w) s.vocab.unknown.push(w);
         });
         s.step = 3; renderStep();
       });
@@ -308,6 +329,16 @@
           });
         });
       });
+    }).then(function () {
+      /* 词汇步自报"不认识"的词 → 自动入库并进入今日复习队列（自己的真实弱词优先学） */
+      var unknown = (s.vocab && s.vocab.unknown) || [];
+      return Promise.all(unknown.map(function (w) {
+        var g = ASSESS_GLOSS[w] || {};
+        return ECContent.addVocab({
+          word: w, meaning: g.meaning || '', pos: g.pos || '', pron: g.pron || '',
+          example: g.example || '', related: g.related || []
+        }, { contentId: null, url: '', context: '基线测评：你标记"不认识"的词' });
+      }));
     }).then(function () {
       renderTabs();
       renderToday(true);
@@ -407,8 +438,10 @@
   function renderToday(justBaseline) {
     ECA.getProfile().then(function (p) {
       if (!p || !p.baseline) { renderOnboarding(); return; }
-      var today = EDB.dayKey();
-      Promise.all([
+      /* Day1 启动词包：词汇表为空时自动注入种子文章 A 类词（只补一次，不重复入库） */
+      ECContent.seedStarterVocab().then(function () {
+        var today = EDB.dayKey();
+        return Promise.all([
         todayPlan(),
         ECR.countDue(),
         getActiveSession(today),
@@ -487,9 +520,10 @@
               '<span class="tag">' + esc((c.difficulty && c.difficulty.label) || '') + '</span>' +
               (readToday[c.id] ? ' <span class="tag tag-ok">今日已读</span>' : '') +
               '<span style="color:var(--ink3);font-size:12px"> · ' + esc(c.source) + '</span></div>';
-          }).join('') + '<p class="hint">AI 采集或粘贴的真实内容会出现在这里（见「阅读」页导入）。</p>'
+          }).join('') + '<p class="hint">内置种子与导入的真实内容都会出现在这里（见「阅读」页）。</p>'
             : '<div class="empty">还没有加工好的内容。去「阅读」页导入并加工第一篇。</div>';
         });
+      });
       });
     });
   }
@@ -649,9 +683,8 @@
     blockRoot().innerHTML = '<p class="kv">读取到期复习项…</p>';
     ECR.dueToday().then(function (items) {
       if (!items.length) {
-        blockRoot().innerHTML = '<div class="empty">今天没有到期复习。直接进入下一块。</div>' +
+        blockRoot().innerHTML = '<div class="empty">今天没有到期复习项。复习队列的来源：基线测评里你标记"不认识"的词、阅读时点 A 类词入库、对话中教练记录的错误。完成阅读块后，这里很快就会有内容。直接进入下一块。</div>' +
           '<button class="btn btn-cinnabar" id="btn-skip-rev" style="margin-top:10px">下一块</button>';
-        $('btn-skip-rev').addEventListener('click', function () { completeBlock(idx, { note: '无到期项' }); });
         return;
       }
       EApp.revQueue = items;
@@ -737,9 +770,8 @@
   function runReadingBlock(b, idx) {
     ECContent.pickUnread().then(function (content) {
       if (!content) {
-        blockRoot().innerHTML = '<div class="empty">没有可用内容。去「阅读」页导入并加工一篇，或先用内置种子内容。</div>' +
+        blockRoot().innerHTML = '<div class="empty">没有可用内容。内置种子文章打开应用时自动就绪（如缺失，刷新页面即可恢复）；也可去「阅读」页导入新内容。</div>' +
           '<button class="btn btn-cinnabar" id="btn-goto-read" style="margin-top:10px">去导入内容</button>';
-        $('btn-goto-read').addEventListener('click', function () { go('reading'); });
         return;
       }
       openReader(content, idx, b.minutes);
@@ -786,7 +818,8 @@
       /* 词汇行 */
       var ext = $('reader-extra');
       var vocab = (m.vocab || []).slice(0, 10);
-      ext.innerHTML = vocab.length ? '<div class="panel alt"><h3>本篇词汇（AI 分类标注）</h3>' +
+      var vhead = m.aiGenerated === false ? '本篇词汇（内置种子材料）' : '本篇词汇（AI 分类标注）';
+      ext.innerHTML = vocab.length ? '<div class="panel alt"><h3>' + vhead + '</h3>' +
         vocab.map(function (v) {
           var cls = v.cls === 'A' ? 'tag-a' : v.cls === 'B' ? 'tag-b' : 'tag-c';
           return '<div class="vitem"><span class="vw en">' + esc(v.word) + '</span>' +
@@ -859,6 +892,19 @@
           }).catch(function (e) { toast('入库失败：' + e.message); });
       });
       if (readerState) readerState.lookups++;
+    }
+    /* 优先用本篇已加工的内置词表（种子材料离线可查可入库，不调 AI、不花额度） */
+    var mVocab = (readerState && readerState.content && readerState.content.material && Array.isArray(readerState.content.material.vocab)) ? readerState.content.material.vocab : [];
+    var wLow = String(word).toLowerCase();
+    var hit = mVocab.filter(function (v) { return String(v.word || '').trim().toLowerCase() === wLow; })[0];
+    if (!hit && /s$/.test(wLow) && wLow.length > 3) {   /* 简单去复数：drafts → draft */
+      var stem = wLow.slice(0, -1);
+      hit = mVocab.filter(function (v) { return String(v.word || '').trim().toLowerCase() === stem; })[0];
+    }
+    if (hit) {
+      word = String(hit.word).toLowerCase();   /* 入库存基本形（点的是复数也归并到词条） */
+      fill({ cls: hit.cls, meaning: hit.meaning, pos: hit.pos, pron: hit.pron || '', example: hit.example || '', related: hit.related || [] }, '来自本篇内置词汇表（种子材料，未调用 AI）');
+      return;
     }
     if (!aiReady()) {
       fill({ cls: 'B', meaning: '（AI 未配置，无法释义——配置后可查词）', pos: '', pron: '', example: '', related: [] }, 'AI 未配置');
@@ -1241,7 +1287,7 @@
       var el = $('content-list');
       if (!el) return;
       if (!rows.length) {
-        el.innerHTML = '<div class="empty">还没有内容。导入内容包 JSON，或粘贴一篇文章，或等内置种子内容（首次自动加载）。</div>';
+        el.innerHTML = '<div class="empty">还没有内容。内置种子文章首次自动加载（已预置学习材料，直接可读）；也可导入内容包 JSON 或粘贴一篇文章。</div>';
         return;
       }
       el.innerHTML = rows.map(function (c) {
@@ -1473,7 +1519,7 @@
       toast('STT 设置已保存');
     });
     /* 同步区 */
-    ECSync.updateStatusUI();
+    if (window.ECSync) ECSync.updateStatusUI();
     $('btn-sync-now').addEventListener('click', function () {
       if (!ECSync.isReady()) { toast('请先在千手首页「设置中心 → 云同步」配置仓库与令牌'); return; }
       ECSync.pushNow('manual').then(function () {
