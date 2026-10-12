@@ -329,11 +329,51 @@
     });
   }
 
+  /* ---------- 表达沉淀：对话 L2 纠错学到的自然说法 → 「我的表达」资产 + 复习队列 ----------
+     设计依据：表达四档中“Understandable but unnatural”不当严重错误，
+     应沉淀为要主动用起来的表达（复习形式：在新对话中主动使用），与“我的错误”分流 */
+  function saveExpression(corr, scenario) {
+    var text = String((corr && corr.finalCorrected) || '').trim();
+    if (!text) return Promise.resolve(null);
+    var row = {
+      id: EDB.uid(), text: text.slice(0, 300),
+      original: String((corr && corr.original) || '').slice(0, 300),
+      scenario: String(scenario || 'conversation').slice(0, 120),
+      meaning: text.slice(0, 120),          /* 复习卡 loadAnswer 读 meaning：直接显示表达本身 */
+      example: '', source: 'conversation',
+      mastery: 1, mastery_evidence: [{ level: 1, evidence: 'first_seen', when: EDB.nowIso() }],
+      next_review: EDB.dayKey(), review_count: 0,
+      created_at: EDB.nowIso()
+    };
+    return EDB.put('expressions', row).then(function () {
+      return ECR.create(row.id, 'expression', text.slice(0, 60)).then(function () { return row; });
+    });
+  }
+
+  /* ---------- 听力复述沉淀：5 遍法第 5 遍复述转写 → 听力难点资产 + 复习队列（重听+再复述） ---------- */
+  function saveListeningRetell(contentId, title, transcript) {
+    var tr = String(transcript || '').trim();
+    if (!tr) return Promise.resolve(null);
+    var row = {
+      id: EDB.uid(), contentId: contentId || null, type: 'retell',
+      title: String(title || '').slice(0, 120),
+      transcript: tr.slice(0, 300),
+      meaning: '重听《' + String(title || '').slice(0, 40) + '》一遍，再用自己的话复述（下面是你上次第 5 遍的复述记录）',
+      example: tr.slice(0, 150),
+      mastery: 1, next_review: EDB.dayKey(), review_count: 0,
+      created_at: EDB.nowIso()
+    };
+    return EDB.put('listeningIssues', row).then(function () {
+      return ECR.create(row.id, 'listening', (String(title || '') + ' · 复述').slice(0, 60)).then(function () { return row; });
+    });
+  }
+
   window.ECContent = {
     importPack: importPack, importPaste: importPaste,
     process: process, listContent: listContent, pickUnread: pickUnread,
     logReading: logReading, addVocab: addVocab,
     estimateDifficulty: estimateDifficulty, seedIfNeeded: seedIfNeeded,
-    seedStarterVocab: seedStarterVocab
+    seedStarterVocab: seedStarterVocab,
+    saveExpression: saveExpression, saveListeningRetell: saveListeningRetell
   };
 })();

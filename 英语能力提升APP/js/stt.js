@@ -1,14 +1,17 @@
 /**
  * ECSTT · 语音识别适配层
  * 主通道：MiniMax ASR（用户确认选型）——录音采集 → 16kHz WAV 编码 → multipart 上传
- *         默认按 OpenAI 兼容惯例 POST {base}/v1/audio/transcriptions（端点路径可配置）。
- *         诚实边界：MiniMax 官方 ASR 端点格式未拿到权威文档，首次使用请点"测试识别"
- *         真实验证；若路径不同，在设置中修改"端点路径"即可，绝不伪造成功。
- * 回退：Web Speech API（浏览器原生，英语栏目已验证可用），设置中可切换。
+ *         官方端点已核实（2026-10-12）：POST {base}/v1/speech_to_text，模型 asr-1.0；
+ *         来源：MiniMax 官方 CLI 源码 github.com/MiniMax-AI/cli（endpoints.ts + utils/stt.ts），
+ *         并经 api.minimax.cn / api.minimaxi.com / api.minimax.chat 三域名实测确认存在。
+ *         关键细节：language 通过请求头传递（官方 CLI 注明：form 里的 language 字段会被忽略）；
+ *         响应为 {text, duration}；文件上限 50MB。
+ * 回退：Web Speech API（浏览器原生，英语栏目已验证可用）——MiniMax 通道失败时自动尝试
+ *        （音频上传未授权的隐私拒绝除外，不静默改道其他云服务）。
  *
  * 密钥策略：优先用本栏目 STT 配置；未配置时自动沿用千手统一设置中心的
  * AI 服务地址与密钥（同一 MiniMax key 通吃 chat/T2A/ASR，零额外配置）。
- * 隐私策略：上传音频前检查统一设置"允许云端语音判断"（privacy.audioUpload），
+ * 隐私策略：上传音频前检查统一设置“允许云端语音判断”（privacy.audioUpload），
  *          未开启则拒绝上传并提示，不静默外发。
  */
 (function () {
@@ -20,17 +23,23 @@
     provider: 'minimax',            /* 'minimax' | 'webspeech' */
     baseUrl: '',                     /* 留空自动沿用统一设置中心 AI 地址 */
     apiKey: '',                      /* 留空自动沿用统一设置中心密钥 */
-    path: '/v1/audio/transcriptions',/* OpenAI 兼容默认；官方路径不同在此改 */
-    model: '',
-    language: 'en-US'
+    path: '/v1/speech_to_text',      /* 官方端点（已核实，勿改除非官方变更） */
+    model: 'asr-1.0',
+    language: 'en'                   /* BCP-47 简码；经请求头传递 */
   };
 
   function cfg() {
+    var c;
     try {
       var raw = localStorage.getItem(CFG_KEY);
       if (!raw) return JSON.parse(JSON.stringify(DEFAULT));
-      return Object.assign({}, DEFAULT, JSON.parse(raw));
+      c = Object.assign({}, DEFAULT, JSON.parse(raw));
     } catch (e) { return JSON.parse(JSON.stringify(DEFAULT)); }
+    /* 存量配置自动迁移：早期版本用的是未核实的 OpenAI 兼容猜测路径（已实测 404） */
+    if (!c.path || c.path === '/v1/audio/transcriptions') c.path = '/v1/speech_to_text';
+    if (!c.model) c.model = 'asr-1.0';
+    if (c.language === 'en-US') c.language = 'en';
+    return c;
   }
   function saveCfg(c) {
     try { localStorage.setItem(CFG_KEY, JSON.stringify(c)); return true; } catch (e) { return false; }
@@ -137,13 +146,17 @@
     if (window.AgentShared && !AgentShared.isAudioUploadAllowed()) {
       return Promise.reject(new Error('音频上传未授权：请在千手首页「设置中心 → 语音」勾选「允许云端语音判断」（音频会发给 MiniMax 做识别）'));
     }
+    /* 官方格式（github.com/MiniMax-AI/cli）：multipart 必填 model/response_format，
+       audio 走 file 字段；language 只认请求头（form 里的同名字段会被忽略） */
+    /* 官方格式（github.com/MiniMax-AI/cli）：multipart 必填 model/response_format，
+       audio 走 file 字段；language 只认请求头（form 里的同名字段会被忽略） */
     var fd = new FormData();
+    fd.append('model', net.model || 'asr-1.0');
+    fd.append('response_format', 'json');
     fd.append('file', blob, 'speech.wav');
-    if (net.model) fd.append('model', net.model);
-    fd.append('language', net.language);
     return fetch(net.base + net.path, {
       method: 'POST',
-      headers: { 'Authorization': 'Bearer ' + net.key },
+      headers: { 'Authorization': 'Bearer ' + net.key, 'language': net.language || 'en' },
       body: fd
     }).then(function (res) {
       return res.text().then(function (txt) {
@@ -245,6 +258,21 @@
         /* 最长 25 秒自动停 */
         setTimeout(function () { if (!finished) finish(); }, 25000);
       });
+    }).catch(function (err) {
+      /* MiniMax 通道失败 → 自动回退浏览器原生识别（Web Speech），回退来源如实标注；
+         隐私拒绝（音频上传未授权）不回退：不经同意不把音频改道其他云服务 */
+      if (String((err && err.message) || '').indexOf('音频上传未授权') >= 0) return Promise.reject(err);
+      var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SR) return Promise.reject(err);
+      if (window.console) console.warn('[ECSTT] MiniMax 通道失败，自动回退浏览器原生识别（Web Speech）：', (err && err.message));
+      return webListen(opts.onPartial).then(function (r) {
+        r.provider = 'webspeech(auto-fallback)';
+        r.fallbackFrom = 'minimax';
+        r.fallbackReason = (err && err.message) || '';
+        return r;
+      }).catch(function (wsErr) {
+        throw new Error('语音识别均不可用：MiniMax 通道失败（' + ((err && err.message) || '未知') + '）；浏览器原生识别也不可用（' + ((wsErr && wsErr.message) || '未知') + '）。本地 file:// 打开时浏览器可能禁用麦克风——请改用线上地址打开（https），或用文字输入继续');
+      });
     });
   }
 
@@ -258,7 +286,7 @@
 
   window.ECSTT = {
     cfg: cfg, saveCfg: saveCfg, detect: detect,
-    listen: listen, testASR: testASR,
+    listen: listen, testASR: testASR, transcribe: transcribe,
     resolveNet: resolveNet,
     isWebSpeechAvailable: function () { return !!(window.SpeechRecognition || window.webkitSpeechRecognition); }
   };

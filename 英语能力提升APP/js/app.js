@@ -321,7 +321,7 @@
         };
         ECA.SKILLS.forEach(function (k) { p.skills[k] = r.skills && typeof r.skills[k] === 'number' ? r.skills[k] : p.skills[k]; });
         p.focusAreas = r.focusAreas || [];
-        p.phaseStart = EDB.nowIso();
+        if (!p.phaseStart) p.phaseStart = EDB.nowIso();   /* 重测只更新画像，不重置 90 天进度 */
         return ECA.saveProfile(p).then(function () {
           return EDB.put('assessments', {
             id: EDB.uid(), type: 'baseline', date: EDB.dayKey(),
@@ -409,6 +409,17 @@
     var weekend = (d === 0 || d === 6);
     return weekend ? (profile.dailyMinutesWeekend || 60) : (profile.dailyMinutesWeekday || 30);
   }
+  /* Quick 5：全天完成后的一轮 5 分钟速练（真实计划：有到期复习给复习，否则 5 分钟听力重听；不入 dailyPlans 表，不污染今日正式计划） */
+  function buildQuickPlan() {
+    return ECR.countDue().then(function (due) {
+      if (due > 0) {
+        return { blocks: [{ type: 'review', minutes: 5, label: '快速复习', why: due + ' 项到期（5 分钟速练）', contentId: null, done: false }], focus: '速练' };
+      }
+      return ECContent.pickUnread().then(function (c) {
+        return { blocks: [{ type: 'listening', minutes: 5, label: '快速听力', why: '重听一篇练耳朵（5 分钟速练）', contentId: c ? c.id : null, done: false }], focus: '速练' };
+      });
+    });
+  }
   function savePlan(mission, today) {
     var plan = {
       id: EDB.uid(), date: today, status: 'active',
@@ -440,6 +451,16 @@
       if (!p || !p.baseline) { renderOnboarding(); return; }
       /* Day1 启动词包：词汇表为空时自动注入种子文章 A 类词（只补一次，不重复入库） */
       ECContent.seedStarterVocab().then(function () {
+        /* 90 天三阶段自动推进（Day31→Phase2 / Day61→Phase3，从首次基线日起算；只升不降） */
+        var dayN = dayIndex(p);
+        var targetPhase = dayN >= 61 ? 3 : dayN >= 31 ? 2 : 1;
+        if ((p.phase || 1) < targetPhase) {
+          var oldPhase = p.phase || 1;
+          p.phase = targetPhase;
+          ECA.saveProfile(p);
+          logEvent('phase_advanced', { from: oldPhase, to: targetPhase, day: dayN });
+          toast('已进入 Phase ' + targetPhase + '（第 ' + dayN + ' 天）：' + (targetPhase === 2 ? '真实文章比例加大，计划权重已自动调整' : '以真实工作内容为主，计划权重已自动调整'));
+        }
         var today = EDB.dayKey();
         return Promise.all([
         todayPlan(),
@@ -501,7 +522,10 @@
         }
 
         render(html);
-        $('btn-start-mission').addEventListener('click', function () { startMission(plan); });
+        $('btn-start-mission').addEventListener('click', function () {
+          if (allDone) { buildQuickPlan().then(function (q) { startMission(q); }); }
+          else startMission(plan);
+        });
         $('btn-replan').addEventListener('click', function () {
           EDB.byIndex('dailyPlans', 'byDate', today).then(function (rows) {
             (rows || []).forEach(function (p2) { p2.status = 'archived'; EDB.put('dailyPlans', p2); });
@@ -611,7 +635,7 @@
     var plan = EApp.plan, s = EApp.session;
     s.progress[idx].done = true;
     plan.blocks[idx].done = true;
-    EDB.put('dailyPlans', plan);
+    if (plan.id) EDB.put('dailyPlans', plan);   /* Quick5 速练无 id，不入计划表，避免覆盖今日正式计划 */
     EDB.put('activities', Object.assign({
       id: EDB.uid(), sessionId: s.id, date: EDB.dayKey(),
       type: plan.blocks[idx].type, minutes: plan.blocks[idx].minutes,
@@ -836,8 +860,9 @@
     });
     $('btn-read-listen').addEventListener('click', function () {
       var t = readerState.level === 1 ? (m.level1 || content.excerpt) : (content.excerpt || '');
-      ECTTS.say(String(t).slice(0, 1500), { rate: 0.85 });
-      toast('正在朗读（系统语音，语速 0.85）');
+      /* 真人感 MiniMax T2A 优先（用户偏好），未配置/失败自动回退系统语音 */
+      ECTTS.say(String(t).slice(0, 1500), { rate: 0.85, premium: true });
+      toast(ECTTS.ttsReady() ? '正在朗读（MiniMax T2A 真人感，语速 0.85；失败自动回退系统语音）' : '正在朗读（系统语音——到设置中心配置 MiniMax T2A 可得真人感）');
     });
     $('btn-read-done').addEventListener('click', function () {
       var dur = Math.round((Date.now() - readerState.t0) / 60000);
@@ -950,13 +975,16 @@
             ECSTT.listen({}).then(function (r) {
               $('ls-retell').innerHTML = '<b>你的复述（' + r.provider + ' 识别）：</b>' + esc(r.text);
               logEvent('listening_retell', { contentId: content.id, transcript: r.text.slice(0, 300) });
+              /* 复述转写存为听力难点资产：间隔复习时重听+再复述（激活 listening 类复习） */
+              ECContent.saveListeningRetell(content.id, content.title, r.text);
             }).catch(function (e) { $('ls-retell').textContent = '识别失败（可跳过）：' + e.message; });
           });
         }
       }
       drawStage();
       $('ls-play').addEventListener('click', function () {
-        ECTTS.say(String(script).slice(0, 1500), { rate: stage === 0 ? 0.9 : 1.0 });
+        /* 听力训练用真人感 MiniMax T2A（配置后自动启用，失败回退系统语音） */
+        ECTTS.say(String(script).slice(0, 1500), { rate: stage === 0 ? 0.9 : 1.0, premium: true });
       });
       $('ls-next').addEventListener('click', function () {
         if (stage < 4) { stage++; drawStage(); }
@@ -1071,8 +1099,9 @@
             var n = btn.getAttribute('data-corr');
             $('corr-hint-' + n).innerHTML = '自然表达：<b class="en">' + esc(corr.finalCorrected || '') + '</b>（跟读一遍）';
             btn.remove();
-            logMistake(corr);
-            ECTTS.say(corr.finalCorrected || '', {});
+            /* L2 表达沉淀：学到的自然说法进「我的表达」资产（不当错误记），跟读示范用真人感 T2A */
+            ECContent.saveExpression(corr, EApp.conv && EApp.conv.scenario);
+            ECTTS.say(corr.finalCorrected || '', { premium: true });
           });
         } else if (corr.level === 1 && corr.finalCorrected) {
           logMistake(corr);
@@ -1372,6 +1401,7 @@
   function renderLibrary() {
     Promise.all([EDB.getAll('vocabulary'), EDB.getAll('expressions'), EDB.getAll('mistakes')]).then(function (r) {
       var vocab = r[0].sort(function (a, b) { return (a.mastery - b.mastery) || (a.word > b.word ? 1 : -1); });
+      var exprs = (r[1] || []).slice().sort(function (a, b) { return (a.mastery - b.mastery) || ((b.created_at || '') > (a.created_at || '') ? 1 : -1); });
       var mistakes = r[2].filter(function (m) { return !m.resolved; });
       var total = vocab.reduce(function (a, v) { return a + v.mastery; }, 0);
       var avg = vocab.length ? (total / vocab.length / 5 * 100).toFixed(0) : 0;
@@ -1385,6 +1415,13 @@
               return '<i class="' + (v.mastery >= i ? 'on' : '') + '"></i>';
             }).join('') + '</span><br><span style="color:var(--ink3)">' + (v.mastery) + '/5</span></span></div>';
         }).join('') : '<div class="empty">还没入库。阅读时点 A 类词即可加入。</div>') + '</div>' +
+        '<div class="panel"><h2>我的表达（' + exprs.length + ' 条 · 对话中学到的自然说法）</h2>' +
+        (exprs.length ? exprs.map(function (x) {
+          return '<div class="vitem"><span class="vw"><span class="tag tag-b">表达</span></span>' +
+            '<span class="vm"><span class="en" style="color:var(--green)">' + esc((x.text || '').slice(0, 100)) + '</span>' +
+            (x.scenario && x.scenario !== 'conversation' ? '<br><span style="color:var(--ink3);font-size:12px">来自：' + esc(String(x.scenario).slice(0, 50)) + '</span>' : '') + '</span>' +
+            '<span class="vstat"><span style="color:var(--ink3)">' + (x.mastery || 1) + '/5</span></span></div>';
+        }).join('') : '<div class="empty">对话中教练给的自然表达会沉淀到这里：L2 纠错时点“想不出来，看自然表达”并跟读后自动保存。</div>') + '</div>' +
         '<div class="panel"><h2>我的错误库（未解决 ' + mistakes.length + ' 条）</h2>' +
         (mistakes.length ? mistakes.map(function (m) {
           return '<div class="vitem"><span class="vw"><span class="tag tag-a">' + esc(m.mistake_type) + '</span></span>' +
@@ -1487,7 +1524,7 @@
       '<option value="minimax"' + (c.provider === 'minimax' ? ' selected' : '') + '>MiniMax ASR（主通道）</option>' +
       '<option value="webspeech"' + (c.provider === 'webspeech' ? ' selected' : '') + '>Web Speech 浏览器原生（回退）</option></select></div>' +
       '<div class="set-row"><label>端点路径</label><input type="text" id="stt-path" value="' + esc(c.path) + '"></div>' +
-      '<div class="set-row"><label>模型（可空）</label><input type="text" id="stt-model" value="' + esc(c.model) + '" placeholder="留空用服务默认"></div>' +
+      '<div class="set-row"><label>模型</label><input type="text" id="stt-model" value="' + esc(c.model) + '" placeholder="asr-1.0"></div>' +
       '<div class="set-row"><label>独立地址（可空）</label><input type="text" id="stt-base" value="' + esc(c.baseUrl) + '" placeholder="留空沿用统一设置中心 AI 地址"></div>' +
       '<div class="set-row"><label>独立密钥（可空）</label><input type="password" id="stt-key" value="' + esc(c.apiKey) + '" placeholder="留空沿用统一设置中心密钥"></div>' +
       '<div class="set-row"><button class="btn btn-ink btn-sm" id="btn-stt-save">保存 STT 设置</button>' +
@@ -1510,7 +1547,7 @@
     $('btn-stt-save').addEventListener('click', function () {
       ECSTT.saveCfg({
         provider: $('stt-provider').value,
-        path: $('stt-path').value.trim() || '/v1/audio/transcriptions',
+        path: $('stt-path').value.trim() || '/v1/speech_to_text',
         model: $('stt-model').value.trim(),
         baseUrl: $('stt-base').value.trim(),
         apiKey: $('stt-key').value.trim(),
