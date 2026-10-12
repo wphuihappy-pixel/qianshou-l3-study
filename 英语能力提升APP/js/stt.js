@@ -148,8 +148,6 @@
     }
     /* 官方格式（github.com/MiniMax-AI/cli）：multipart 必填 model/response_format，
        audio 走 file 字段；language 只认请求头（form 里的同名字段会被忽略） */
-    /* 官方格式（github.com/MiniMax-AI/cli）：multipart 必填 model/response_format，
-       audio 走 file 字段；language 只认请求头（form 里的同名字段会被忽略） */
     var fd = new FormData();
     fd.append('model', net.model || 'asr-1.0');
     fd.append('response_format', 'json');
