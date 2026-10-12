@@ -115,18 +115,65 @@
         .filter(function (c) { return !status || c.status === status; });
     });
   }
-  function pickUnread() {
+  /* 选一篇未读内容；targetScore（1/2/3，可选）= i+1 目标难度档：
+     档内有货只在该档里选（踮脚够得着），缺货回退全部未读（不因缺货空转） */
+  function pickUnread(targetScore) {
     return EDB.getAll('reading').then(function (readRows) {
       var readIds = {};
       readRows.forEach(function (r) { readIds[r.contentId] = true; });
       return EDB.getAll('content').then(function (rows) {
         var processed = rows.filter(function (c) { return c.status === 'processed' && !readIds[c.id]; });
-        if (processed.length) return processed[0];
+        var pool = processed;
+        if (targetScore) {
+          var hit = processed.filter(function (c) { return c.difficulty && c.difficulty.score === targetScore; });
+          if (hit.length) pool = hit;
+        }
+        if (pool.length) return pool[0];
         /* 无未读则重读最早一篇（真实内容值得读两遍） */
         var any = rows.filter(function (c) { return c.status === 'processed'; });
         return any.length ? any[any.length - 1] : null;
       });
     });
+  }
+
+  /* ---------- i+1 选文：目标难度档（设计文档·第三章：目标难度 = 当前 Reading 维度 + 0.5） ----------
+     reading 0-5 → 舒适档 1/2/3；目标档 = 舒适档 + 1（上限 3）；
+     降档保护：最近一次阅读查词密度 > 8% → 目标降回舒适档（可解释，不硬踮） */
+  function readingTargetScore(profile, lastReading, contents) {
+    var r = (profile && profile.skills && profile.skills.reading) || 0;
+    var comfy = r < 2.0 ? 1 : (r < 3.5 ? 2 : 3);
+    var target = Math.min(3, comfy + 1);
+    if (lastReading && Array.isArray(contents)) {
+      var c = contents.filter(function (x) { return x.id === lastReading.contentId; })[0];
+      var wc = c && c.difficulty && c.difficulty.wordCount;
+      if (wc && (lastReading.lookupCount || 0) / wc > 0.08) {
+        target = comfy;
+      }
+    }
+    return target;
+  }
+
+  /* ---------- 复述/跟读相似度：词级重合率（0-1，本地规则，不冒充语义评分） ---------- */
+  function retellOverlap(transcript, script) {
+    var toks = function (s) {
+      return String(s || '').toLowerCase().match(/[a-z']+/g) || [];
+    };
+    var a = toks(transcript), b = toks(script);
+    if (!b.length) return 0;
+    if (!a.length) return 0;
+    var bSet = {};
+    b.forEach(function (w) { bSet[w] = (bSet[w] || 0) + 1; });
+    var hit = 0;
+    a.forEach(function (w) { if (bSet[w] > 0) { hit++; bSet[w]--; } });
+    return +(hit / b.length).toFixed(2);
+  }
+
+  /* ---------- 听力语速阶梯判定（设计文档：0.75→0.9→1.0→1.1x，复述准确率≥70% 升档） ----------
+     复述词重合 ≥0.4（口语复述天然稀疏，阈值校准过）→ up；有转写但 <0.2 → down；其余 stay */
+  function ladderStep(overlap) {
+    if (overlap >= 0.4) return { dir: 'up', reason: '复述词重合 ' + overlap + '：语速升一档' };
+    if (overlap < 0.2) return { dir: 'down', reason: '复述词重合 ' + overlap + '：语速降一档' };
+    return { dir: 'stay', reason: '复述词重合 ' + overlap + '：维持当前语速档' };
   }
 
   /* ---------- 阅读完成记录（查词密度 → 隐式评估信号） ---------- */
@@ -368,9 +415,58 @@
     });
   }
 
+  /* ---------- 发音难点沉淀：跟读后 ASR 可懂度低 → 入库进复习队列 ----------
+     诚实边界：这不是音素评分，是“能不能被听懂”的可懂度代理（设计文档·第五章）；
+     同一目标句 3 天内已记录过不重复建（防泛滥） */
+  function savePronunciationIssue(label, targetText, transcript, score) {
+    var target = String(targetText || '').trim();
+    if (!target) return Promise.resolve(null);
+    return EDB.getAll('pronunciationIssues').then(function (rows) {
+      var recent = (rows || []).filter(function (r) {
+        return r.target === target && (Date.now() - new Date(r.created_at).getTime()) < 3 * 86400000;
+      });
+      if (recent.length) return null;
+      var row = {
+        id: EDB.uid(), word: String(label || target.slice(0, 30)).slice(0, 60),
+        target: target.slice(0, 200), transcript: String(transcript || '').slice(0, 200),
+        note: '跟读后 ASR 可懂度低（词重合 ' + score + '，阈值 0.55）——可懂度代理，非音素评分',
+        meaning: '跟读这句话，点“跟读验证”看 ASR 能否听懂（可懂度代理）',
+        example: target.slice(0, 150),
+        mastery: 1, phoneme: null, review_count: 0,
+        created_at: EDB.nowIso()
+      };
+      return EDB.put('pronunciationIssues', row).then(function () {
+        return ECR.create(row.id, 'pronunciation', row.word).then(function () { return row; });
+      });
+    });
+  }
+
+  /* ---------- 语法句型沉淀：对话评估/写作评估的诚实观察 → 入库进复习队列（pattern 去重） ---------- */
+  function saveGrammarNote(text, scenario) {
+    var t = String(text || '').trim();
+    if (!t || t.length < 4) return Promise.resolve(null);
+    /* “没有明显问题”类观察不入库 */
+    if (/没有|无明显|不太明显|no (obvious|major|notable)/i.test(t)) return Promise.resolve(null);
+    return EDB.getAll('grammarPatterns').then(function (rows) {
+      if ((rows || []).some(function (r) { return r.pattern === t.slice(0, 200); })) return null;
+      var row = {
+        id: EDB.uid(), pattern: t.slice(0, 200), scenario: String(scenario || '').slice(0, 120),
+        meaning: '表达时注意这个语法点（来源：' + (scenario || '评估') + '的诚实观察）——复习即在新情境中注意它',
+        example: t.slice(0, 150),
+        mastery: 1, review_count: 0,
+        created_at: EDB.nowIso()
+      };
+      return EDB.put('grammarPatterns', row).then(function () {
+        return ECR.create(row.id, 'grammar', row.pattern.slice(0, 60)).then(function () { return row; });
+      });
+    });
+  }
+
   window.ECContent = {
     importPack: importPack, importPaste: importPaste,
     process: process, listContent: listContent, pickUnread: pickUnread,
+    readingTargetScore: readingTargetScore, retellOverlap: retellOverlap, ladderStep: ladderStep,
+    savePronunciationIssue: savePronunciationIssue, saveGrammarNote: saveGrammarNote,
     logReading: logReading, addVocab: addVocab,
     estimateDifficulty: estimateDifficulty, seedIfNeeded: seedIfNeeded,
     seedStarterVocab: seedStarterVocab,

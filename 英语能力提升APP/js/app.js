@@ -88,6 +88,10 @@
     else if (view === 'settings') renderSettings();
   }
   EApp.go = go;
+  /* 供 E2E 与内部复用的导出（规则函数，不依赖 DOM） */
+  EApp.applyWeeklySnapshot = applyWeeklySnapshot;
+  EApp.pickWriteTask = pickWriteTask;
+  EApp.gapDays = gapDays;
 
   function render(viewHtml) {
     viewRoot.innerHTML = '<div class="view">' + viewHtml + '</div>';
@@ -359,17 +363,34 @@
   };
 
   function buildDraft(minutes, digest) {
-    var w = PHASE_WEIGHTS[digest.profile.phase || 1];
+    var w = Object.assign({}, PHASE_WEIGHTS[digest.profile.phase || 1]);
+    /* 周报落地的自动调整（规则计算）：本周生效的落后维度块 +6%、领先维度块 -6% */
+    var adj = digest.profile.weightAdjust;
+    if (adj && adj.weekStart === EDB.weekStart() && adj.up && adj.down && w[adj.up] != null && w[adj.down] != null) {
+      w[adj.up] = +(w[adj.up] + 0.06).toFixed(2);
+      w[adj.down] = Math.max(0.05, +(w[adj.down] - 0.06).toFixed(2));
+    }
     var blocks = [];
     var reviewMin = Math.min(8, Math.max(5, Math.round((digest.dueReviews || 0) * 1.2)));
-    var contentPromise = ECContent.pickUnread();
-    return contentPromise.then(function (content) {
+    /* i+1 选文（设计·第三章：目标难度 = 当前 Reading 维度 + 0.5，查词密度过高自动降档保护） */
+    var contentPromise = Promise.all([
+      EDB.getAll('reading'),
+      EDB.getAll('content')
+    ]).then(function (rr) {
+      var lastReading = (rr[0] || []).sort(function (a, b) { return (b.created_at || '').localeCompare(a.created_at || ''); })[0] || null;
+      var target = ECContent.readingTargetScore(digest.profile, lastReading, rr[1]);
+      return ECContent.pickUnread(target).then(function (content) {
+        return { content: content, target: target };
+      });
+    });
+    return contentPromise.then(function (pick) {
+      var content = pick.content;
       blocks.push({ type: 'review', minutes: Math.min(reviewMin, minutes), label: '间隔复习', why: (digest.dueReviews || 0) + ' 项到期（词/错/表达）', contentId: null });
       var remain = minutes - blocks[0].minutes;
       var scale = remain / minutes;
       function add(type) {
         var m = Math.round(minutes * w[type] * scale);
-        if (m >= 5) blocks.push({ type: type, minutes: m, label: '', why: '', contentId: type === 'reading' ? (content ? content.id : null) : null });
+        if (m >= 5) blocks.push({ type: type, minutes: m, label: '', why: type === 'reading' ? 'i+1 选文：目标难度档 ' + pick.target + '（当前阅读舒适档 +1）' : '', contentId: type === 'reading' ? (content ? content.id : null) : null });
       }
       add('reading'); add('listening'); add('conversation'); add('writing');
       if (!blocks.some(function (b) { return b.type === 'reading'; }) && content) {
@@ -462,16 +483,20 @@
           toast('已进入 Phase ' + targetPhase + '（第 ' + dayN + ' 天）：' + (targetPhase === 2 ? '真实文章比例加大，计划权重已自动调整' : '以真实工作内容为主，计划权重已自动调整'));
         }
         var today = EDB.dayKey();
+        var weekNow = EDB.weekStart();
         return Promise.all([
         todayPlan(),
         ECR.countDue(),
         getActiveSession(today),
         EDB.getAll('dailyPlans'),
         EDB.byIndex('reading', 'byDate', today),
-        EDB.getAll('events')
+        EDB.getAll('events'),
+        EDB.getAll('reading')
       ]).then(function (r) {
         var plan = r[0], due = r[1], session = r[2], allPlans = r[3], todayReadings = r[4];
         var todayEvents = (r[5] || []).filter(function (e) { return e.date === today; });
+        var allReadings = r[6] || [];
+        var microDone = (r[5] || []).some(function (e) { return e.type === 'micro_test' && e.date >= weekNow; });
         var doneCount = plan.blocks.filter(function (b) { return b.done; }).length;
         var allDone = doneCount === plan.blocks.length && plan.blocks.length > 0;
 
@@ -482,6 +507,25 @@
         var html = '<div class="hero"><div class="daytag">DAY ' + dayIndex(p) + ' · PHASE ' + (p.phase || 1) + '</div>' +
           '<h1>' + greet + ', ' + esc(p.name || 'friend') + '</h1>' +
           '<p>今日重点：' + esc(plan.focus || '口语 + 听力') + (streak > 1 ? ' · 已连续学习 ' + streak + ' 天' : '') + '</p></div>';
+
+        /* 周报落地的自动调整提示（本周生效，规则可解释） */
+        var adjNow = (p.weightAdjust && p.weightAdjust.weekStart === weekNow) ? p.weightAdjust : null;
+        if (adjNow) {
+          html += '<div class="panel alt"><p class="kv"><b>本周自动调整：</b>' + esc(TYPE_LABEL(adjNow.up)) + ' 块权重 +6%、' + esc(TYPE_LABEL(adjNow.down)) + ' 块 -6%。<span class="hint">依据：' + esc(adjNow.reason || '上周周报趋势对比') + '。</span></p></div>';
+        }
+
+        /* 断档温和提醒（设计·第七章：连续 3 天未学习 → 温和提醒 + 推 5 分钟口语） */
+        var gapN = gapDays(allPlans, today);
+        if (gapN >= 3) {
+          html += '<div class="panel alt"><p class="kv">歇了 ' + gapN + ' 天没关系，英语是肌肉记忆，今天 5 分钟就能把感觉找回来。</p>' +
+            '<button class="btn btn-cinnabar" id="btn-gap-comeback" style="margin-top:8px">来 5 分钟口语（把感觉找回来）</button></div>';
+        }
+
+        /* 每周微测入口（设计·第七章：Day7/14/21… 显式微测，5 分钟校准隐式估计） */
+        if (dayN % 7 === 0 && !microDone && allReadings.length) {
+          html += '<div class="panel alt"><h2>每周微测 · 5 分钟</h2><p class="kv">读 1 段 + 听 1 段 + 说 1 段，校准本周的隐式估计（自评 + ASR 证据，规则计算可解释）。</p>' +
+            '<button class="btn btn-ink" id="btn-micro-test" style="margin-top:8px">开始本周微测</button></div>';
+        }
 
         /* 今日任务 */
         html += '<div class="panel"><h2>Today\'s Mission · ' + plan.blocks.reduce(function (a, b) { return a + b.minutes; }, 0) + ' 分钟' + (plan.fallback ? '（规则模板，AI 未配置）' : '') + '</h2>';
@@ -509,7 +553,7 @@
               '<span class="sval">' + v.toFixed(1) + '</span>' +
               '<span class="strend ' + (trend > 0 ? 'up' : trend < 0 ? 'down' : '') + '">' + (trend > 0 ? '↑' : trend < 0 ? '↓' : '→') + '</span></div>';
           }).join('') +
-          '<p class="hint" style="margin-top:10px">0–5 为训练证据的内部估计，不等于考试分数；趋势对比的是上周均值。看得出来：你弱在哪，教练就补哪。</p></div>';
+          '<p class="hint" style="margin-top:10px">0–5 为训练证据的内部估计，不等于考试分数；趋势箭头 = 与上一份周报的 9 维快照对比（生成周报后自动更新）。看得出来：你弱在哪，教练就补哪。</p></div>';
 
         /* 推荐内容 */
         html += '<div class="panel"><h2>Today\'s Recommended</h2><div id="rec-list">读取中…</div></div>';
@@ -522,6 +566,10 @@
         }
 
         render(html);
+        if ($('btn-gap-comeback')) $('btn-gap-comeback').addEventListener('click', function () {
+          startMission({ blocks: [{ type: 'conversation', minutes: 5, label: '5 分钟口语', why: '断档回归：先开口找回语感', contentId: null, done: false }], focus: '口语' });
+        });
+        if ($('btn-micro-test')) $('btn-micro-test').addEventListener('click', function () { renderMicroTest(); });
         $('btn-start-mission').addEventListener('click', function () {
           if (allDone) { buildQuickPlan().then(function (q) { startMission(q); }); }
           else startMission(plan);
@@ -575,6 +623,34 @@
     return (p.skillTrends && typeof p.skillTrends[skill] === 'number') ? p.skillTrends[skill] : 0;
   }
 
+  /* 断档天数：从昨天起连续未学的天数（今天已学则 0；设计：≥3 温和提醒） */
+  function gapDays(plans, today) {
+    var days = {};
+    (plans || []).forEach(function (p) {
+      if (p.blocks && p.blocks.some(function (b) { return b.done; })) days[p.date] = true;
+    });
+    if (days[today]) return 0;
+    var gap = 0, d = new Date();
+    d.setDate(d.getDate() - 1);
+    for (var i = 0; i < 90; i++) {
+      var key = EDB.dayKey(d);
+      if (days[key]) break;
+      gap++;
+      d.setDate(d.getDate() - 1);
+    }
+    return gap;
+  }
+
+  /* 听力语速阶梯（设计·第三章：0.75→0.9→1.0→1.1x，复述达标升档，证据驱动） */
+  var RATE_LADDER = [0.75, 0.9, 1.0, 1.1];
+  function listenIdxOf(p) { return Math.max(0, Math.min(3, (p && typeof p.listenIdx === 'number') ? p.listenIdx : 0)); }
+  function applyListenLadder(p, dir) {
+    var cur = listenIdxOf(p);
+    if (dir === 'up') p.listenIdx = Math.min(3, cur + 1);
+    else if (dir === 'down') p.listenIdx = Math.max(0, cur - 1);
+    return p.listenIdx;
+  }
+
   /* ================================================================
    * Mission 执行（可中断续学）
    * ================================================================ */
@@ -585,6 +661,10 @@
         session = { id: EDB.uid(), date: today, mode: 'daily', status: 'active', progress: plan.blocks.map(function (b) { return { type: b.type, done: b.done, minutes: b.minutes }; }), started_at: EDB.nowIso() };
         EDB.put('sessions', session);
       }
+      /* 计划形状变化时（速练/断档回归口语），按当前块表对齐进度，防止越界与旧进度残留 */
+      session.progress = plan.blocks.map(function (b, i) {
+        return (session.progress && session.progress[i]) || { type: b.type, done: !!b.done, minutes: b.minutes };
+      });
       EApp.session = session;
       EApp.plan = plan;
       runNextBlock();
@@ -776,7 +856,13 @@
       } else {
         el.innerHTML = '<b>' + esc(it.meaning || it.example || '') + '</b>' +
           (it.example ? '<div class="hint en" style="margin-top:5px">' + esc(it.example) + '</div>' : '') +
-          (q.itemType === 'pronunciation' ? '<div class="hint" style="margin-top:6px">跟读一遍，用"测试识别"验证 ASR 能听懂（可懂度代理，非音素评分）。</div>' : '');
+          (q.itemType === 'pronunciation' ? '<div class="hint" style="margin-top:6px">跟读一遍，点“跟读验证”验证 ASR 能否听懂（可懂度代理，非音素评分）。</div>' +
+            '<div style="margin-top:6px"><button class="btn btn-outline btn-sm" id="rev-shadow-verify">跟读验证</button></div>' : '') +
+          (q.itemType === 'grammar' ? '<div class="hint" style="margin-top:6px">下次对话/写作时注意这个点——复习即在新情境中用对它。</div>' : '');
+        var svBtn = el.querySelector('#rev-shadow-verify');
+        if (svBtn) svBtn.addEventListener('click', function () {
+          shadowVerify(it.example || q.label, it.word || q.label, 'review');
+        });
       }
     });
   }
@@ -964,6 +1050,11 @@
       function drawStage() {
         $('ls-stage').textContent = stageNames[stage];
         $('ls-sub').textContent = '内容：' + content.title;
+        if (stage === 0) {
+          ECA.getProfile().then(function (pp) {
+            if ($('ls-sub')) $('ls-sub').textContent = '内容：' + content.title + ' · 本遍语速 ' + RATE_LADDER[listenIdxOf(pp)] + 'x（复述达标自动升档）';
+          });
+        }
         var body = $('ls-body');
         if (stage === 1 || stage === 3) body.innerHTML = '<div class="reader-text" style="font-size:14.5px">' + esc(String(script).slice(0, 900)) + '</div>';
         else if (stage === 2) body.innerHTML = '<div class="hint">播放时留意连读与弱读：want to→wanna、going to→gonna、kind of→kinda。听不清的地方重放。</div>';
@@ -977,14 +1068,29 @@
               logEvent('listening_retell', { contentId: content.id, transcript: r.text.slice(0, 300) });
               /* 复述转写存为听力难点资产：间隔复习时重听+再复述（激活 listening 类复习） */
               ECContent.saveListeningRetell(content.id, content.title, r.text);
+              /* 语速阶梯（设计·第三章）：复述词重合 ≥0.4 升档、<0.2 降档，其余不动 */
+              var ov = ECContent.retellOverlap(r.text, script);
+              var lad = ECContent.ladderStep(ov);
+              ECA.getProfile().then(function (pp) {
+                var before = listenIdxOf(pp);
+                applyListenLadder(pp, lad.dir);
+                return ECA.saveProfile(pp).then(function () {
+                  if (listenIdxOf(pp) !== before) {
+                    $('ls-retell').innerHTML += '<br><b>' + lad.reason + '：下篇听力第 1 遍语速 ' + RATE_LADDER[listenIdxOf(pp)] + 'x</b>';
+                  }
+                });
+              });
             }).catch(function (e) { $('ls-retell').textContent = '识别失败（可跳过）：' + e.message; });
           });
         }
       }
       drawStage();
       $('ls-play').addEventListener('click', function () {
-        /* 听力训练用真人感 MiniMax T2A（配置后自动启用，失败回退系统语音） */
-        ECTTS.say(String(script).slice(0, 1500), { rate: stage === 0 ? 0.9 : 1.0, premium: true });
+        /* 听力训练用真人感 MiniMax T2A；第1遍走语速阶梯（0.75→0.9→1.0→1.1，证据驱动升降档），后续遍原速巩固 */
+        ECA.getProfile().then(function (pp) {
+          var rate = stage === 0 ? RATE_LADDER[listenIdxOf(pp)] : 1.0;
+          ECTTS.say(String(script).slice(0, 1500), { rate: rate, premium: true });
+        });
       });
       $('ls-next').addEventListener('click', function () {
         if (stage < 4) { stage++; drawStage(); }
@@ -1097,11 +1203,16 @@
         if (btn) {
           btn.addEventListener('click', function () {
             var n = btn.getAttribute('data-corr');
-            $('corr-hint-' + n).innerHTML = '自然表达：<b class="en">' + esc(corr.finalCorrected || '') + '</b>（跟读一遍）';
+            $('corr-hint-' + n).innerHTML = '自然表达：<b class="en">' + esc(corr.finalCorrected || '') + '</b>（听一遍，再跟读） ' +
+              '<button class="btn btn-ghost btn-sm" id="corr-verify-' + n + '">跟读验证</button>';
             btn.remove();
             /* L2 表达沉淀：学到的自然说法进「我的表达」资产（不当错误记），跟读示范用真人感 T2A */
             ECContent.saveExpression(corr, EApp.conv && EApp.conv.scenario);
             ECTTS.say(corr.finalCorrected || '', { premium: true });
+            var vb = $('corr-verify-' + n);
+            if (vb) vb.addEventListener('click', function () {
+              shadowVerify(corr.finalCorrected || '', corr.original || '', EApp.conv && EApp.conv.scenario);
+            });
           });
         } else if (corr.level === 1 && corr.finalCorrected) {
           logMistake(corr);
@@ -1110,6 +1221,26 @@
     }
     log.appendChild(div);
     log.scrollTop = log.scrollHeight;
+  }
+
+  /* 跟读验证：ASR 可懂度代理（设计·第五章：ASR 听懂 = 能被人听懂；非音素评分，不冒充发音诊断）
+     词重合 <0.55 → 存发音难点进复习队列；≥0.55 → 可懂度 OK 不入队；识别失败不强行判断 */
+  function shadowVerify(target, label, scenario) {
+    if (!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)) {
+      toast('此浏览器不支持麦克风，无法跟读验证（复习卡仍可自读）');
+      return;
+    }
+    toast('请跟读这句话（说完停顿自动结束）…');
+    ECSTT.listen({}).then(function (r) {
+      var ov = ECContent.retellOverlap(r.text, target);
+      if (ov < 0.55) {
+        ECContent.savePronunciationIssue(label || String(target).slice(0, 30), target, r.text, ov).then(function (row) {
+          toast(row ? 'ASR 可懂度低（词重合 ' + ov + '，阈值 0.55）：已记入发音复习队列（可懂度代理，非音素评分）' : '这条 3 天内已记录过，不重复建');
+        });
+      } else {
+        toast('ASR 听懂了（词重合 ' + ov + '）：可懂度 OK，不用进复习队列');
+      }
+    }).catch(function (e) { toast('识别失败，不强行判断：' + e.message); });
   }
 
   function logMistake(corr) {
@@ -1180,6 +1311,8 @@
       busy(true, '教练正在评估这段对话…');
       return ECA.convAssess(c.turns).then(function (a) {
         convRow.assessment = a;
+        /* 语法句型沉淀：评估的 grammar 诚实观察 → 复习队列（pattern 去重，“无明显问题”不入库） */
+        if (a && a.grammar) ECContent.saveGrammarNote(a.grammar, c.scenario);
         return EDB.put('conversations', convRow);
       }).then(function () {
         busy(false);
@@ -1227,42 +1360,64 @@
     });
   }
 
-  /* 写作块 */
+  /* 写作块：任务池按设计·第九章覆盖六类（邮件/工作沟通/Slack 消息/简短介绍/产品说明/观点表达），
+     按 Phase 筛选 + 近 7 天去重（不做过的优先），无可用时回退全部——不空转 */
   var WRITE_TASKS = [
-    '写 2-3 句英文：介绍你最近在做的 AI 工作。',
-    '写一封 3 句的英文邮件：请同事review你的方案。',
-    '写 2 句 Slack 风格的英文消息：告诉团队 build 好了。'
+    { t: '写 2-3 句英文：介绍你最近在做的 AI 工作。', p: 1 },
+    { t: '写一封 3 句的英文邮件：请同事 review 你的方案。', p: 1 },
+    { t: '写 2 句 Slack 风格的英文消息：告诉团队 build 好了。', p: 1 },
+    { t: '写 3 句英文：向外国同事介绍你的团队在做什么。', p: 1 },
+    { t: '写 2 句英文：解释你今天用 AI 做了什么。', p: 2 },
+    { t: '写 3 句英文：给客户说明一个 AI 产品的核心价值。', p: 2 },
+    { t: '写一封 4 句英文邮件：约定一次线上会议时间。', p: 2 },
+    { t: '写一段 4 句英文：说明一个数字化项目的目标与进展。', p: 3 },
+    { t: '写 3-4 句英文：表达你对“AI agent 会改变工作方式”的看法。', p: 3 }
   ];
+  function pickWriteTask(profile, recentDone) {
+    var phase = (profile && profile.phase) || 1;
+    var weekAgo = new Date(Date.now() - 7 * 86400000).toISOString();
+    var used = (recentDone || []).filter(function (e) { return (e.created_at || '') >= weekAgo; })
+      .map(function (e) { return e.data && e.data.task; });
+    var pool = WRITE_TASKS.filter(function (x) { return x.p <= phase && used.indexOf(x.t) < 0; });
+    if (!pool.length) pool = WRITE_TASKS.filter(function (x) { return x.p <= phase; });
+    if (!pool.length) pool = WRITE_TASKS;
+    return pool[Math.floor(Math.random() * pool.length)].t;
+  }
   function runWritingBlock(b, idx) {
-    var task = WRITE_TASKS[Math.floor(Math.random() * WRITE_TASKS.length)];
-    blockRoot().innerHTML = '<div class="rev-card"><div class="rc-type">WRITING</div>' +
-      '<div class="rc-main">' + esc(task) + '</div>' +
-      '<textarea class="field" id="wt-input" rows="4" placeholder="用自己的话写，写错没关系——教练会保留你的水平，只指出差距"></textarea>' +
-      '<div class="rev-actions" style="margin-top:12px">' +
-      '<button class="btn btn-cinnabar" id="wt-submit">提交给教练</button>' +
-      '<button class="btn btn-outline" id="wt-done">跳过并完成</button></div>' +
-      '<div id="wt-result"></div></div>';
-    $('wt-submit').addEventListener('click', function () {
-      var t = $('wt-input').value.trim();
-      if (!t) { toast('先写两句再提交'); return; }
-      if (!aiReady()) { toast('AI 未配置，无法评估写作'); return; }
-      busy(true, '教练正在读你的句子…');
-      ECA.assessWriting(t, task).then(function (r) {
-        busy(false);
-        $('wt-result').innerHTML = '<div class="divider"></div>' +
-          '<div class="kv"><b>意思：</b>' + esc(r.meaning || '') + '</div>' +
-          '<div class="kv"><b>你的版本（轻度整理）：</b><span class="en">' + esc(r.myVersion || '') + '</span></div>' +
-          '<div class="kv"><b>更自然的版本：</b><span class="en" style="color:var(--cinnabar)">' + esc(r.naturalVersion || '') + '</span></div>' +
-          '<div class="kv"><b>最值得改的：</b>' + (r.notes || []).map(esc).join('；') + '</div>';
-        logEvent('writing_done', { task: task, text: t.slice(0, 300) });
-        ECA.getProfile().then(function (p) {
-          p.skills.writing = Math.min(5, +(p.skills.writing + 0.06).toFixed(2));
-          ECA.saveProfile(p);
-        });
-        $('wt-done').textContent = '完成写作块';
-      }).catch(function (e) { busy(false); toast('评估失败：' + e.message); });
+    Promise.all([ECA.getProfile(), EDB.getAll('events')]).then(function (rr) {
+      var recentDone = (rr[1] || []).filter(function (e) { return e.type === 'writing_done'; });
+      var task = pickWriteTask(rr[0], recentDone);
+      blockRoot().innerHTML = '<div class="rev-card"><div class="rc-type">WRITING</div>' +
+        '<div class="rc-main">' + esc(task) + '</div>' +
+        '<textarea class="field" id="wt-input" rows="4" placeholder="用自己的话写，写错没关系——教练会保留你的水平，只指出差距"></textarea>' +
+        '<div class="rev-actions" style="margin-top:12px">' +
+        '<button class="btn btn-cinnabar" id="wt-submit">提交给教练</button>' +
+        '<button class="btn btn-outline" id="wt-done">跳过并完成</button></div>' +
+        '<div id="wt-result"></div></div>';
+      $('wt-submit').addEventListener('click', function () {
+        var t = $('wt-input').value.trim();
+        if (!t) { toast('先写两句再提交'); return; }
+        if (!aiReady()) { toast('AI 未配置，无法评估写作'); return; }
+        busy(true, '教练正在读你的句子…');
+        ECA.assessWriting(t, task).then(function (r) {
+          busy(false);
+          $('wt-result').innerHTML = '<div class="divider"></div>' +
+            '<div class="kv"><b>意思：</b>' + esc(r.meaning || '') + '</div>' +
+            '<div class="kv"><b>你的版本（轻度整理）：</b><span class="en">' + esc(r.myVersion || '') + '</span></div>' +
+            '<div class="kv"><b>更自然的版本：</b><span class="en" style="color:var(--cinnabar)">' + esc(r.naturalVersion || '') + '</span></div>' +
+            '<div class="kv"><b>最值得改的：</b>' + (r.notes || []).map(esc).join('；') + '</div>';
+          logEvent('writing_done', { task: task, text: t.slice(0, 300) });
+          /* 写作评估的改进点 → 语法句型复习队列（诚实观察，pattern 去重） */
+          (r.notes || []).slice(0, 2).forEach(function (n) { ECContent.saveGrammarNote(n, '写作评估'); });
+          ECA.getProfile().then(function (p) {
+            p.skills.writing = Math.min(5, +(p.skills.writing + 0.06).toFixed(2));
+            ECA.saveProfile(p);
+          });
+          $('wt-done').textContent = '完成写作块';
+        }).catch(function (e) { busy(false); toast('评估失败：' + e.message); });
+      });
+      $('wt-done').addEventListener('click', function () { completeBlock(idx); });
     });
-    $('wt-done').addEventListener('click', function () { completeBlock(idx); });
   }
 
   /* ================================================================
@@ -1433,8 +1588,156 @@
   }
 
   /* ================================================================
+   * 每周微测（设计·第七章：读 1 段 + 听 1 段 + 说 1 段，5 分钟，结果回写 9 维）
+   * 全程规则驱动：自评三档 + ASR 转写证据，不依赖 AI，不伪造评估
+   * ================================================================ */
+  function renderMicroTest() {
+    EDB.getAll('reading').then(function (readRows) {
+      if (!readRows.length) { toast('还没有阅读记录，先读一篇再微测'); go('today'); return; }
+      var last = readRows.sort(function (a, b) { return (b.created_at || '').localeCompare(a.created_at || ''); })[0];
+      EDB.get('content', last.contentId).then(function (content) {
+        if (!content) { toast('微测内容的原文已不存在'); go('today'); return; }
+        drawMicro({ step: 0, selfRate: 0, retell: '', answer: '', content: content });
+      });
+    });
+  }
+
+  function drawMicro(st) {
+    var m = (st.content.material || {});
+    var script = m.listeningScript || m.level1 || st.content.excerpt;
+    var head = '<div class="hero"><div class="daytag">WEEKLY CHECK</div><h1>每周微测 · 5 分钟</h1>' +
+      '<p>读 1 段 + 听 1 段 + 说 1 段，校准本周的隐式估计（自评 + ASR 证据，规则计算可解释）。</p></div>';
+    if (st.step === 0) {
+      render(head + '<div class="panel"><h2>① 读：看多快读懂</h2>' +
+        '<div class="reader-text" style="font-size:14.5px">' + esc(String(st.content.excerpt || '').slice(0, 600)) + '</div>' +
+        '<p class="kv" style="margin-top:10px">读完点一个——诚实最重要：</p>' +
+        '<div class="rev-actions">' +
+        '<button class="btn btn-cinnabar" data-mr="easy">轻松读完</button>' +
+        '<button class="btn btn-outline" data-mr="ok">能懂但费劲</button>' +
+        '<button class="btn btn-ghost" data-mr="hard">吃力</button></div></div>');
+      viewRoot.querySelectorAll('[data-mr]').forEach(function (b) {
+        b.addEventListener('click', function () {
+          st.selfRate = { easy: 0.08, ok: 0.02, hard: -0.05 }[b.getAttribute('data-mr')];
+          st.step = 1; drawMicro(st);
+        });
+      });
+      return;
+    }
+    if (st.step === 1) {
+      render(head + '<div class="panel"><h2>② 听：播一遍再复述</h2>' +
+        '<div class="rev-actions"><button class="btn btn-cinnabar" id="mt-play">播放</button></div>' +
+        '<p class="hint" style="margin-top:8px" id="mt-rate">（本遍语速与日常训练阶梯一致）</p>' +
+        '<div class="quiz-voice" style="margin-top:10px"><button class="mic-btn" id="mt-mic"><span>复述</span></button>' +
+        '<div class="mic-state" id="mt-micstate">听完后用自己的话说大意</div></div>' +
+        '<div id="mt-retell" class="hint" style="margin-top:8px"></div>' +
+        '<div class="rev-actions" style="margin-top:10px"><button class="btn btn-ink" id="mt-next2">下一步：说</button> ' +
+        '<button class="btn btn-ghost btn-sm" id="mt-skip-l">跳过复述（不加分）</button></div></div>');
+      ECA.getProfile().then(function (pp) {
+        if ($('mt-rate')) $('mt-rate').textContent = '（本遍语速 ' + RATE_LADDER[listenIdxOf(pp)] + 'x · 与日常听力训练同档）';
+      });
+      $('mt-play').addEventListener('click', function () {
+        ECA.getProfile().then(function (pp) {
+          ECTTS.say(String(script).slice(0, 1500), { rate: RATE_LADDER[listenIdxOf(pp)], premium: true });
+        });
+      });
+      $('mt-mic').addEventListener('click', function () {
+        $('mt-micstate').textContent = '正在听你的复述…';
+        ECSTT.listen({}).then(function (r) {
+          st.retell = r.text;
+          $('mt-retell').innerHTML = '<b>你的复述（' + esc(r.provider) + ' 识别）：</b>' + esc(r.text);
+        }).catch(function (e) { $('mt-retell').textContent = '识别失败（可跳过，不强行判断）：' + e.message; });
+      });
+      $('mt-skip-l').addEventListener('click', function () { st.step = 2; drawMicro(st); });
+      $('mt-next2').addEventListener('click', function () { st.step = 2; drawMicro(st); });
+      return;
+    }
+    var q = (m.questions || [])[0] || 'What is this article about?';
+    render(head + '<div class="panel"><h2>③ 说：回答一个问题</h2>' +
+      '<p class="kv en" style="font-weight:700">' + esc(q) + '</p>' +
+      '<div class="quiz-voice" style="margin-top:10px"><button class="mic-btn" id="mt-mic2"><span>回答</span></button>' +
+      '<div class="mic-state" id="mt-micstate2">用 1-3 句英文回答</div></div>' +
+      '<div id="mt-answer" class="hint" style="margin-top:8px"></div>' +
+      '<div class="rev-actions" style="margin-top:10px"><button class="btn btn-cinnabar" id="mt-finish">完成微测</button> ' +
+      '<button class="btn btn-ghost btn-sm" id="mt-skip-s">跳过（不计口语分）</button></div></div>');
+    $('mt-mic2').addEventListener('click', function () {
+      $('mt-micstate2').textContent = '正在听你的回答…';
+      ECSTT.listen({}).then(function (r) {
+        st.answer = r.text;
+        $('mt-answer').innerHTML = '<b>你的回答（' + esc(r.provider) + ' 识别）：</b>' + esc(r.text);
+      }).catch(function (e) { $('mt-answer').textContent = '识别失败（可跳过）：' + e.message; });
+    });
+    $('mt-skip-s').addEventListener('click', function () { finishMicroTest(st); });
+    $('mt-finish').addEventListener('click', function () { finishMicroTest(st); });
+  }
+
+  function finishMicroTest(st) {
+    var m = (st.content.material || {});
+    var script = m.listeningScript || m.level1 || st.content.excerpt;
+    ECA.getProfile().then(function (p) {
+      var applied = { reading: st.selfRate || 0 };
+      p.skills.reading = Math.max(0, Math.min(5, +(p.skills.reading + (st.selfRate || 0)).toFixed(2)));
+      var ov = null;
+      if (st.retell) {
+        ov = ECContent.retellOverlap(st.retell, script);
+        var adjL = ov >= 0.4 ? 0.08 : (ov >= 0.2 ? 0.02 : -0.03);
+        applied.listening = adjL;
+        p.skills.listening = Math.max(0, Math.min(5, +(p.skills.listening + adjL).toFixed(2)));
+        /* 语速阶梯联动（与听力块同一证据规则） */
+        var lad = ECContent.ladderStep(ov);
+        if (lad.dir !== 'stay') {
+          applyListenLadder(p, lad.dir);
+          applied.listenLadder = lad.reason;
+        }
+      }
+      if (st.answer) {
+        applied.speaking = 0.08;
+        p.skills.speaking = Math.min(5, +(p.skills.speaking + 0.08).toFixed(2));
+      }
+      return ECA.saveProfile(p).then(function () {
+        return logEvent('micro_test', {
+          weekStart: EDB.weekStart(), contentId: st.content.id,
+          selfRate: st.selfRate, retellOverlap: ov,
+          retell: String(st.retell || '').slice(0, 300), answer: String(st.answer || '').slice(0, 300),
+          applied: applied
+        });
+      });
+    }).then(function () {
+      toast('微测完成：9 维已按证据校准（阅读 ' + (st.selfRate > 0 ? '+' : '') + st.selfRate + (st.retell ? '，听力按复述重合校准' : '') + (st.answer ? '，口语 +0.08' : '') + '）');
+      go('today');
+    }).catch(function (e) { toast('微测保存失败：' + e.message); go('today'); });
+  }
+
+  /* ================================================================
    * 报告页
    * ================================================================ */
+  /* 周报落地（规则、可解释）：
+   * ① 9 维趋势 = 当前 skills − 上份周报快照（写入 profile.skillTrends，趋势箭头即激活）
+   * ② 下周权重调整：四技能块里增长最低 +6%、最高 -6%（总量守恒；复习量由到期数决定不参与） */
+  function applyWeeklySnapshot(p, prev, week) {
+    if (!p) return Promise.resolve(null);
+    var trends = {};
+    ECA.SKILLS.forEach(function (k) {
+      trends[k] = (prev && prev.skillsSnapshot) ? +(((p.skills[k] || 0) - (prev.skillsSnapshot[k] || 0)).toFixed(2)) : 0;
+    });
+    p.skillTrends = trends;
+    var SKILL_TO_BLOCK = { listening: 'listening', reading: 'reading', speaking: 'conversation', writing: 'writing' };
+    if (prev && prev.skillsSnapshot) {
+      var keys = Object.keys(SKILL_TO_BLOCK);
+      keys.sort(function (a, b) { return (trends[a] || 0) - (trends[b] || 0); });
+      var low = keys[0], high = keys[keys.length - 1];
+      if ((trends[low] || 0) < (trends[high] || 0)) {
+        p.weightAdjust = {
+          up: SKILL_TO_BLOCK[low], down: SKILL_TO_BLOCK[high],
+          reason: '本周' + ECA.SKILL_CN[low] + '增长(' + trends[low] + ')低于' + ECA.SKILL_CN[high] + '(' + trends[high] + ')',
+          weekStart: week
+        };
+      } else {
+        p.weightAdjust = null;   /* 各维度均衡增长：不调整 */
+      }
+    }
+    return ECA.saveProfile(p);
+  }
+
   function renderReport() {
     var week = EDB.weekStart();
     EDB.byIndex('weeklyReports', 'byWeek', week).then(function (rows) {
@@ -1473,11 +1776,17 @@
             ECA.weeklyReport(weekStats).then(function (rep) {
               rep.weekStart = week;
               rep.created_at = EDB.nowIso();
-              return EDB.put('weeklyReports', { id: EDB.uid(), weekStart: week, report: rep, created_at: EDB.nowIso() }).then(function () {
+              /* 快照 + 趋势 + 下周权重调整（规则落地，见 applyWeeklySnapshot） */
+              return EDB.getAll('weeklyReports').then(function (rows) {
+                var prev = (rows || []).filter(function (x) { return x.weekStart < week; })
+                  .sort(function (a, b) { return (b.weekStart || '').localeCompare(a.weekStart || ''); })[0] || null;
+                return EApp.applyWeeklySnapshot(p, prev, week).then(function () {
+                  return EDB.put('weeklyReports', { id: EDB.uid(), weekStart: week, report: rep, skillsSnapshot: JSON.parse(JSON.stringify(p.skills || {})), created_at: EDB.nowIso() });
+                });
+              }).then(function () {
                 busy(false);
-                /* 趋势更新：周报后 skillTrends = 本周微调累计（简化：由 skills 与 baseline 差值） */
                 renderReport();
-                toast('周报已生成。');
+                toast('周报已生成。9 维趋势与下周权重调整已按规则落地。');
               });
             }).catch(function (e) { busy(false); toast('周报生成失败：' + e.message); });
           });
@@ -1494,7 +1803,8 @@
       }).join('') || '<p class="kv">（无维度变化数据）</p>') +
       (rep.trulyMastered && rep.trulyMastered.length ? '<div class="divider"></div><div class="kv"><b>真正掌握：</b>' + rep.trulyMastered.map(esc).join('、') + '</div>' : '') +
       (rep.mistakesTop && rep.mistakesTop.length ? '<div class="kv"><b>高频错误：</b>' + rep.mistakesTop.map(esc).join('、') + '</div>' : '') +
-      '<div class="divider"></div><div class="kv"><b>下周自动调整：</b>' + esc(rep.nextWeekAdjust || '—') + '</div></div>';
+      '<div class="divider"></div><div class="kv"><b>下周自动调整：</b>' + esc(rep.nextWeekAdjust || '—') + '</div>' +
+      '<p class="hint" style="margin-top:8px">本份周报已存 9 维快照——下份周报的趋势箭头以此为基准；落后维度的权重调整从下周计划自动生效（规则计算，可解释）。</p></div>';
   }
 
   /* ================================================================
